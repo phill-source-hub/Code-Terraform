@@ -36,3 +36,6 @@ save_*.json
 # Sync bookkeeping (hashes of files we last wrote to the game folder; game edits pulled for review)
 .sync-state.json
 .sync-pull/
+
+# Owner's full DOCS manual, split by section (ADR-023): local copy, never committed
+docs/game/manual/
