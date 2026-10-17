@@ -134,8 +134,3 @@ def test_failed_save_is_a_warning_not_a_stop():
 def test_repeats_after_one_world_hour():
     _, _, game = run_grid(seconds=720.0)
     assert game.clock.now == 720.0
-
-
-def test_machine_script_has_no_imports():
-    for line in SCRIPT.read_text(encoding="utf-8").splitlines():
-        assert not line.strip().startswith(("import ", "from ")), line

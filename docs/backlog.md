@@ -17,15 +17,14 @@ Items deferred on purpose. Each one names the trigger that makes it active.
 ## B-002: Replace self-contained copies with Library imports
 
 - Trigger: Shared Library researched (done 2026-10-17) and an owner go-ahead for a game sync.
-- Status: open.
+- Status: repo done on `refactor/shared-libs` (ADR-025). Not yet in game: needs the owner's go-ahead for `sync_to_game.py apply`, then the in-game checklist. The parked power monitor copy is removed by the Automation work, not migrated.
 - To do, in order: 1. Sync `scripts/libs/` first so `lib/` exists in the game. 2. `solar_1.py` and `solar_2.py` import `solar_tracker`. 3. `scripts/contracts/relay_hack.py` imports `relay_hack`. 4. `scripts/parked/power_monitor.py` imports `power_status` when it returns to a slot. 5. Delete the copy-parity tests (`tests/test_solar_copies.py`, the relay parity check in `tests/test_relay_hack_script.py`) and add a test that the game-style import resolves. 6. Log each change in `docs/in-game-test-log.md`.
 - Notes: Libraries must not use `self` or `panel` (manual, Imports & Libraries).
 
 ## B-003: Shared grid helpers
 
 - Trigger: after B-002.
-- Status: open.
-- To do: move `ROWS`, `COLS`, `sector_id`, `parse_sector` and `plan_routes` from `scanner_1.py` and `harvester_1.py` into `scripts/libs/grid.py`. Use `heapq` (a documented built-in) for the route search. Unit-test the route search directly.
+- Status: repo done on `refactor/shared-libs`. `scripts/libs/grid.py` holds `ROWS`, `COLS`, `sector_id`, `parse_sector`, `snake_order` and `plan_routes` (heapq). Unit-tested in `tests/test_grid.py`. Game check pending with B-002.
 
 ## B-004: Harvester `done` list is never cleared
 

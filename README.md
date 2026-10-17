@@ -60,15 +60,16 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | Name | Purpose | Where it runs | Status |
 |------|---------|---------------|--------|
 | power_monitor (`scripts/parked/power_monitor.py`) | warn on power deficit or low battery; read-only. Parked: needs a free machine slot (ADR-017) | was machine `harvester_1` | L1+L2 pass, L3 partial |
-| scanner_1 | Snake-scan all 192 sectors, save map to Data Archive (once researched), repeat hourly | machine `scanner_1` | L1+L2 pass, L3 pending |
-| harvester_1 | Plan heat-cheapest trips to scanned items, collect and store | machine `harvester_1` | L1+L2 pass, L3 pending |
+| scanner_1 | Snake-scan all 192 sectors, save map to Data Archive (once researched), repeat hourly; imports `grid` | machine `scanner_1` | L1+L2 pass, L3 pending |
+| harvester_1 | Plan heat-cheapest trips to scanned items, collect and store; imports `grid` | machine `harvester_1` | L1+L2 pass, L3 pending |
+| grid (Library) | Sector names, snake order, heat route search for scanner and harvester | `scripts/libs/grid.py` (game `lib/grid.py`) | Unit tests only; L3 pending |
 | bio_collector_1 | Explore nearest uncataloged fragment, else one the order needs | machine `bio_collector_1` | L1+L2 pass, L3 pending |
 | bio_lab_1 | Analyze specimen, stage reagents from Inventory, extract, ship sample | machine `bio_lab_1` (home base) | L1+L2 pass, L3 pending |
 | bio_exchange_1 | Fill Bio Order from Inventory samples (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
 | o2gen_1 | Intake CO2/10, dump waste only in 50-60, last resort at 90 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
-| solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; copies are self-contained until B-002 | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001) |
-| relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
+| solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; imports the `solar_tracker` Library | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001); lib import L3 pending |
+| relay_hack (contract) | Orbital Relay Hack; imports the `relay_hack` Library | contract `relay_hack` | Done (C-001 PASS); lib import L3 pending |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
 | terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |

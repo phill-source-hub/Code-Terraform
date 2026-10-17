@@ -255,3 +255,14 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 (log 17:58 UTC) | fe9a45c | PARTIAL PASS | Log: `power ok` printed once, script running. Deficit and low-battery warnings not yet seen. Status bar text not checked. |
+
+## Library imports (ADR-025, branch refactor/shared-libs)
+
+- Check: each script that imports a Library runs in game. Scripts: `solar_1`, `solar_2` (`solar_tracker`), `scanner_1` and `harvester_1` (`grid`), contract `relay_hack` (`relay_hack`).
+- Needs: owner go-ahead for `tools/sync_to_game.py apply` (ADR-011, CLAUDE.md), which copies `scripts/libs/` to `lib/` before the machine scripts.
+- Pass criteria: no `ImportError`, `ModuleNotFoundError` or "not yet researched" in the log. Scanner prints `<sector>: <name>` lines as before. Harvester moves toward an item, as before.
+- Also check: `import heapq` works in harvester_1 (harvester only; documented built-in).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Pending owner go-ahead for sync. |

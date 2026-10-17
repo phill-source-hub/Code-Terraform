@@ -67,13 +67,6 @@ def test_transmits_nothing_when_the_search_fails(monkeypatch):
     assert game.printed[0].startswith("relay_hack failed:")
 
 
-def test_contract_script_has_no_imports():
-    # Library imports need Shared Library research, which the save lacks. Keep it self-contained.
-    for line in SCRIPT.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        assert not stripped.startswith(("import ", "from ")), stripped
-
-
 @pytest.mark.parametrize("seed", range(10))
 def test_contract_solver_finds_secret_on_random_secrets(seed, monkeypatch):
     rng = random.Random(seed)
