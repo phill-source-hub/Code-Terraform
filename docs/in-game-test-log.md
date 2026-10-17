@@ -313,3 +313,5 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 22:37Z | fe9a45c | FAIL | scanner_1 `No module named 'grid'`. Pending restart test. |
+
+| 2026-10-17 22:51Z | fe9a45c | FAIL | Restart of scanner_1: same `No module named 'grid'` at line 24. Library imports fail at runtime in this build for this file. Next: inline `grid` (ADR-025 rollback) or check whether the import works in another script. |
