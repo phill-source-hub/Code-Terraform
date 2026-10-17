@@ -315,3 +315,14 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | 2026-10-17 22:37Z | fe9a45c | FAIL | scanner_1 `No module named 'grid'`. Pending restart test. |
 
 | 2026-10-17 22:51Z | fe9a45c | FAIL | Restart of scanner_1: same `No module named 'grid'` at line 24. Library imports fail at runtime in this build for this file. Next: inline `grid` (ADR-025 rollback) or check whether the import works in another script. |
+
+## Library imports, after relay_solver rename (ADR-030), 2026-10-18
+
+Libraries created in game by the owner: power_status, solar_tracker, grid, trip_log, job_queue, base_watch, relay_solver.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 23:01Z | fe9a45c | PASS | `relay_hack` contract re-run: `already_completed_correct transmitter.transmit completed with status "already_completed_correct"`. Imports `relay_solver`. |
+| 2026-10-17 22:52Z+ | fe9a45c | PASS (no errors) | `scanner_1` (`grid`), `solar_1`, `solar_2`, `solar_3` (`solar_tracker`) restarted by owner. No "Script stopped" lines since. Scanner logs only found items and solar logs nothing, so the log cannot confirm they run; owner reports them running. |
+| — | fe9a45c | PENDING | `harvester_1` (`grid`, `job_queue`, `trip_log`): idle, not yet started. |
+| — | fe9a45c | PENDING | `automation_1` (`base_watch`, `power_status`): not yet checked in log. |
