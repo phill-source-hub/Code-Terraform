@@ -67,3 +67,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: no writes to the game folder (scripts, sync apply) until the owner says the in-game tutorial is complete. Read-only status checks are allowed.
 - Why: the owner is partway through a fresh game. Our scripts would change tutorial state and could break the owner's own experiments.
+
+## ADR-012: Owner-requested edits use a "Help me" marker; pulls go to review
+
+- Date: 2026-10-17
+- Decision: the owner names a script and writes `Help me` on line 1 of its game file. A file whose only content is that marker is treated as a request and may be replaced by sync. Any other owner code under the marker is a normal conflict. Game-side edits to files we wrote come back with `tasks.ps1 pull`, into `.sync-pull/`, never into the repo directly. `--only NAME` limits plan, apply and pull to one script.
+- Why: the manual says the game keeps both versions when files collide and never overwrites an edited in-game script. A one-line marker is an explicit owner instruction, so it is safe to act on; anything else is left for review.

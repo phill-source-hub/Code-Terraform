@@ -1,7 +1,7 @@
 """Orbital Relay Hack: find every tumbler's correct value and transmit the full code.
 
-Where it runs: contract script for `relay_hack`. Paste into the game's contract editor.
-    UNVERIFIED: how a contract script is attached in game. Not synced by tools/sync_to_game.py.
+Where it runs: contract script for `relay_hack`. Synced to the game root as `relay_hack.py`
+    (contract scripts are `<name>.py` at the root, see docs/game/external-editor.md).
 Inputs: `self.contract` (RelayHackContract) and `self.contract.lock` (RelayLock).
 Assumptions: `relay_hack` Library is available as game `lib/relay_hack.py`.
 API facts relied on (docs/game/contracts.md): self.contract, .lock, .id, RelayLock.intercept,

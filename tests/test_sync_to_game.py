@@ -6,6 +6,9 @@ from tools.sync_to_game import (
     Action,
     apply_actions,
     collect_repo_files,
+    filter_targets,
+    find_game_edits,
+    is_help_request,
     is_protected,
     load_state,
     plan_one,
@@ -158,3 +161,57 @@ def test_read_fleet_scripts_reads_scripts_section(tmp_path):
 
 def test_read_fleet_scripts_empty_when_file_missing(tmp_path):
     assert read_fleet_scripts(tmp_path) == {}
+
+
+def test_help_marker_alone_is_a_help_request():
+    assert is_help_request(b"Help me")
+    assert is_help_request(b"Help me\n\n")
+
+
+def test_help_marker_with_owner_code_below_is_not_a_help_request():
+    assert not is_help_request(b"Help me\nprint('mine')\n")
+
+
+def test_other_content_is_not_a_help_request():
+    assert not is_help_request(b"print('hi')\n")
+    assert not is_help_request(b"")
+
+
+def test_plan_replaces_a_help_request_file():
+    action = plan_one("relay_hack.py", b"x", b"Help me", sha256(b"old"))
+    assert action.kind == "update"
+    assert "Help me" in action.reason
+
+
+def test_plan_still_conflicts_when_owner_code_sits_under_help_marker():
+    action = plan_one("relay_hack.py", b"x", b"Help me\nmy code\n", None)
+    assert action.kind == "conflict"
+
+
+def test_filter_targets_matches_file_name_or_full_target():
+    files = {"relay_hack.py": b"a", "lib/relay_hack.py": b"b", "boot.py": b"c"}
+    assert filter_targets(files, ["relay_hack.py"]) == {
+        "relay_hack.py": b"a",
+        "lib/relay_hack.py": b"b",
+    }
+    assert filter_targets(files, ["lib/relay_hack.py"]) == {"lib/relay_hack.py": b"b"}
+
+
+def test_filter_targets_empty_names_keeps_everything():
+    files = {"a.py": b"a"}
+    assert filter_targets(files, []) == files
+
+
+def test_find_game_edits_reports_owner_change_to_a_file_we_wrote():
+    state = {"a.py": sha256(b"ours")}
+    assert find_game_edits({"a.py": b"ours"}, {"a.py": b"owner edit"}, state) == ["a.py"]
+
+
+def test_find_game_edits_ignores_unchanged_files_and_help_requests():
+    state = {"a.py": sha256(b"ours"), "b.py": sha256(b"ours")}
+    game = {"a.py": b"ours", "b.py": b"Help me"}
+    assert find_game_edits({"a.py": b"ours", "b.py": b"ours"}, game, state) == []
+
+
+def test_find_game_edits_ignores_files_we_never_wrote():
+    assert find_game_edits({"a.py": b"x"}, {"a.py": b"hand"}, {}) == []

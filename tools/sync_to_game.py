@@ -8,9 +8,13 @@ Conflict rule: the game edits its own files (in-game edits are written back to d
 file that differs from what we last wrote is a conflict and is never overwritten. State lives
 in `.sync-state.json` in the repo root, which records the sha256 of each file we last wrote.
 
+A game file whose only content is "Help me" on line 1 is an owner request to replace it
+(see docs/game/external-editor.md). Any other owner code is a normal conflict.
+
 Commands:
-    plan    dry run, print what apply would do (default)
+    plan    dry run, print what apply would do (default). --only NAME limits to one script
     apply   write the planned changes; refuses when any conflict exists unless --skip-conflicts
+    pull    copy game-side edits into .sync-pull/ for review. Never touches repo files
     status  read-only: warn/error lines from logs/all.log and script status from the fleet file
 """
 
@@ -28,8 +32,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATE_FILE = REPO_ROOT / ".sync-state.json"
-# Repo folder -> prefix in the game folder. Machine scripts sit at the root; Libraries go in lib/.
-SOURCE_DIRS = {"scripts/main": "", "scripts/libs": "lib/"}
+# Repo folder -> prefix in the game folder. Machine and contract scripts sit at the root;
+# Libraries go in lib/.
+SOURCE_DIRS = {"scripts/main": "", "scripts/contracts": "", "scripts/libs": "lib/"}
+PULL_DIR = REPO_ROOT / ".sync-pull"
+HELP_MARKER = "Help me"
 SAVE_FOLDER = "save_mvcjaxut_26ndfi_scripts"
 DEFAULT_GAME_DIR = Path(os.environ.get("APPDATA", "")) / "io.codeterraform.game" / SAVE_FOLDER
 
@@ -80,6 +87,35 @@ def collect_repo_files(repo_root: Path) -> dict[str, bytes]:
     return files
 
 
+def filter_targets(files: dict[str, bytes], names: list[str]) -> dict[str, bytes]:
+    """Keep only targets whose file name (or full target) is in `names`. Empty means all."""
+    if not names:
+        return files
+    wanted = set(names)
+    return {
+        target: data
+        for target, data in files.items()
+        if target in wanted or target.rsplit("/", 1)[-1] in wanted
+    }
+
+
+def find_game_edits(
+    repo_files: dict[str, bytes],
+    game_files: dict[str, bytes | None],
+    state: dict[str, str],
+) -> list[str]:
+    """Targets we wrote that the owner has since changed in game. Help requests are excluded."""
+    edits = []
+    for target in sorted(repo_files):
+        current = game_files.get(target)
+        last_written = state.get(target)
+        if current is None or last_written is None or is_help_request(current):
+            continue
+        if sha256(current) != last_written:
+            edits.append(target)
+    return edits
+
+
 def read_game_files(game_dir: Path, targets: list[str]) -> dict[str, bytes | None]:
     """Read the current game copy of each target. Missing files map to None."""
     result: dict[str, bytes | None] = {}
@@ -100,6 +136,16 @@ def save_state(path: Path, state: dict[str, str]) -> None:
     path.write_text(json.dumps({"files": state}, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def is_help_request(content: bytes) -> bool:
+    """True when the game file holds only the owner's "Help me" marker on line 1."""
+    lines = content.decode("utf-8", errors="replace").splitlines()
+    return (
+        bool(lines)
+        and lines[0].strip() == HELP_MARKER
+        and all(not line.strip() for line in lines[1:])
+    )
+
+
 def plan_one(target: str, wanted: bytes, current: bytes | None, last_written: str | None) -> Action:
     """Decide the action for one target. Pure: no file access."""
     if is_protected(target):
@@ -112,6 +158,8 @@ def plan_one(target: str, wanted: bytes, current: bytes | None, last_written: st
     current_hash = sha256(current)
     if current_hash == wanted_hash:
         return Action("noop", target)
+    if is_help_request(current):
+        return Action("update", target, "owner asked for help (Help me)")
     # An empty game file (the game's placeholder for a free machine slot) holds nothing to lose.
     if last_written is None and current == b"":
         return Action("create", target, "replaces empty game placeholder")
@@ -177,8 +225,8 @@ def format_plan(actions: list[Action]) -> str:
     )
 
 
-def _cmd_plan(game_dir: Path) -> int:
-    repo_files = collect_repo_files(REPO_ROOT)
+def _cmd_plan(game_dir: Path, names: list[str]) -> int:
+    repo_files = filter_targets(collect_repo_files(REPO_ROOT), names)
     game_files = read_game_files(game_dir, sorted(repo_files))
     actions = plan_sync(repo_files, game_files, load_state(STATE_FILE))
     print(f"game folder: {game_dir}")
@@ -186,8 +234,8 @@ def _cmd_plan(game_dir: Path) -> int:
     return 0
 
 
-def _cmd_apply(game_dir: Path, skip_conflicts: bool) -> int:
-    repo_files = collect_repo_files(REPO_ROOT)
+def _cmd_apply(game_dir: Path, skip_conflicts: bool, names: list[str]) -> int:
+    repo_files = filter_targets(collect_repo_files(REPO_ROOT), names)
     state = load_state(STATE_FILE)
     actions = plan_sync(repo_files, read_game_files(game_dir, sorted(repo_files)), state)
     print(format_plan(actions))
@@ -199,6 +247,21 @@ def _cmd_apply(game_dir: Path, skip_conflicts: bool) -> int:
     save_state(STATE_FILE, new_state)
     written = sum(1 for a in actions if a.kind in {"create", "update"})
     print(f"wrote {written} file(s)")
+    return 0
+
+
+def _cmd_pull(game_dir: Path, names: list[str]) -> int:
+    repo_files = filter_targets(collect_repo_files(REPO_ROOT), names)
+    state = load_state(STATE_FILE)
+    edits = find_game_edits(repo_files, read_game_files(game_dir, sorted(repo_files)), state)
+    if not edits:
+        print("no game-side edits to our files")
+        return 0
+    for target in edits:
+        destination = PULL_DIR / target
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((game_dir / target).read_bytes())
+        print(f"pulled {target} -> {destination}")
     return 0
 
 
@@ -219,9 +282,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument("--game", type=Path, default=DEFAULT_GAME_DIR, help="game scripts folder")
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("plan", help="dry run (default)")
+    plan = sub.add_parser("plan", help="dry run (default)")
+    plan.add_argument("--only", nargs="*", default=[], metavar="NAME")
     apply = sub.add_parser("apply", help="write planned changes")
     apply.add_argument("--skip-conflicts", action="store_true", help="write what is safe only")
+    apply.add_argument(
+        "--only", nargs="*", default=[], metavar="NAME", help="script or Library names"
+    )
+    pull = sub.add_parser("pull", help="copy game-side edits into .sync-pull/ for review")
+    pull.add_argument("--only", nargs="*", default=[], metavar="NAME")
     status = sub.add_parser("status", help="read logs and script status (read-only)")
     status.add_argument("--lines", type=int, default=200, help="log lines to read from the end")
     return parser
@@ -234,11 +303,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"game folder not found: {game_dir}", file=sys.stderr)
         return 1
     command = args.command or "plan"
+    names = getattr(args, "only", [])
     if command == "apply":
-        return _cmd_apply(game_dir, args.skip_conflicts)
+        return _cmd_apply(game_dir, args.skip_conflicts, names)
+    if command == "pull":
+        return _cmd_pull(game_dir, names)
     if command == "status":
         return _cmd_status(game_dir, args.lines)
-    return _cmd_plan(game_dir)
+    return _cmd_plan(game_dir, names)
 
 
 if __name__ == "__main__":
