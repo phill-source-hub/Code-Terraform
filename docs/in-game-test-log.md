@@ -65,7 +65,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-17 | fe9a45c | PASS | Owner reports correct. Log: `contract_xenogenetics: completed`. |
 
 ### X-002: Corrupted Archive (`corrupted_archive`)
 
@@ -78,7 +78,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-17 | fe9a45c | PASS | Owner reports correct. Log: `contract_corrupted_archive: completed`. |
 
 ## Scripts
 

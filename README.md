@@ -59,6 +59,8 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 |------|---------|---------------|--------|
 | power_monitor (`harvester_1.py`) | warn on power deficit or low battery; read-only | machine `harvester_1` (placed on a free slot, not a harvester job) | L1+L2 pass, L3 pending |
 | relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
+| xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
+| corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
 | probe_thermometer (`scanner_1.py`) | P-001 probe: version, component lookup, thermometer read | machine `scanner_1` (one-off) | L3 pending |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
