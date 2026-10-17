@@ -92,7 +92,7 @@ def test_never_dumps_below_the_window():
 
 
 def test_never_dumps_above_the_window_and_warns_once():
-    game, _, dumps = run([61.0, 75.0, 90.0], passes=3)
+    game, _, dumps = run([61.0, 75.0, 85.0], passes=3)
     assert dumps == []
     warnings = [line for line in game.printed if "is above 60" in line]
     assert len(warnings) == 1
@@ -159,3 +159,15 @@ def test_loop_has_no_sleep():
 def test_machine_script_has_no_imports():
     for line in SCRIPT.read_text(encoding="utf-8").splitlines():
         assert not line.strip().startswith(("import ", "from ")), line
+
+
+def test_last_resort_dump_takes_the_penalty_at_ninety():
+    game, _, dumps = run([92.0], passes=1)
+    assert len(dumps) == 1
+    assert "LAST RESORT dump at 92.0, penalty 0.0\n" in game.printed
+
+
+def test_no_last_resort_dump_below_ninety():
+    game, _, dumps = run([89.0], passes=1)
+    assert dumps == []
+    assert any("is above 60" in line for line in game.printed)

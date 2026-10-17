@@ -63,7 +63,8 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
 - Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
 - Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
-- Warning `waste <w> is above 60; not dumping (penalty)` means the window was missed. Paste it with the waste value.
+- Warning `waste <w> is above 60; not dumping until 90` means the window was missed. Waste between 60 and 90 waits.
+- At 90 or above the script takes a last-resort dump: `LAST RESORT dump at <w>, penalty <p>`. Paste it. A non-zero penalty is expected only here.
 - Pass: intake tracks CO2/10 exactly. Each dump happens at 50-60 with penalty 0.0. No `above 60` warning. Waste never reaches 100. Stopping the script sets intake to 0.
 - Fail signs: `warning: set_intake ...` or `warning: dump ...` in the console; a penalty above 0 after a dump in the 50-60 window (paste the status line).
 

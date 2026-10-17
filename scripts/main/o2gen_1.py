@@ -19,6 +19,9 @@ API facts relied on (manual, Oxygen Generator and Atmosphere): self.set_intake(v
 
 DUMP_LOW = 50
 DUMP_HIGH = 60
+# Last resort: waste this high is close to the stall at 100. A dump here takes the penalty,
+# which is accepted only to keep the generator running. Owner-set; not a manual value.
+LAST_RESORT = 90
 
 atmosphere = get_component("atmosphere")
 last_status = None
@@ -43,8 +46,21 @@ while True:
                 print("warning: dump at " + str(round(waste, 1)) + " reported a penalty")
         else:
             print("warning: dump " + dumped.status)
+    elif waste >= LAST_RESORT:
+        dumped = self.dump_waste()
+        if dumped.status == "ok":
+            print(
+                "LAST RESORT dump at " + str(round(waste, 1)) + ", penalty " + str(dumped.penalty)
+            )
+        else:
+            print("warning: last-resort dump " + dumped.status)
     elif waste > DUMP_HIGH and not above_warned:
-        print("warning: waste " + str(round(waste, 1)) + " is above 60; not dumping (penalty)")
+        print(
+            "warning: waste "
+            + str(round(waste, 1))
+            + " is above 60; not dumping until "
+            + str(LAST_RESORT)
+        )
         above_warned = True
     if waste <= DUMP_HIGH:
         above_warned = False
