@@ -27,10 +27,11 @@ def ok(**extra):
     return SimpleNamespace(status="ok", message="", **extra)
 
 
-def lab(specimen=None, loaded=None, send_status="ok", extract_status="ok"):
+def lab(specimen=None, loaded=None, send_status="ok", extract_status="ok", staged=None):
     """Returns (lab, record, output_items). output_items is the port's live contents."""
     record: list = []
     output_items: list = []
+    input_items: list = list(staged or [])
 
     def connect(target):
         record.append(("output.connect", target))
@@ -60,7 +61,11 @@ def lab(specimen=None, loaded=None, send_status="ok", extract_status="ok"):
         discard=lambda: record.append(("discard",)) or ok(),
         input=SimpleNamespace(
             connect=lambda target: record.append(("input.connect", target)) or ok(),
-            take=lambda item, qty: record.append(("input.take", item, qty)) or ok(),
+            take=lambda item, qty: record.append(("input.take", item, qty)) or ok(moved=qty),
+            stacks=lambda: list(input_items),
+            eject=lambda dest, item, qty, props, mode: (
+                record.append(("input.eject", item, qty)) or input_items.clear() or ok()
+            ),
         ),
         output=SimpleNamespace(
             connect=connect,
@@ -85,6 +90,10 @@ def run(owner, collector=True):
             extra_globals={"self": owner},
         )
     return game
+
+
+def _raise_stop():
+    raise _Stop
 
 
 def stop_when(record, name):
@@ -159,7 +168,7 @@ def test_refused_send_keeps_the_specimen_and_warns():
     game = run(owner)
     assert ("discard",) not in record
     assert output_items != []
-    assert game.statuses[-1] == ("output not shipped: research_required", "warn")
+    assert game.statuses[-1] == ("output not shipped (research_required), specimen kept", "warn")
     assert "warning: output not shipped (research_required), specimen kept\n" in game.printed
 
 
@@ -183,3 +192,43 @@ def test_missing_collector_is_an_error():
 def test_machine_script_has_no_imports():
     for line in SCRIPT.read_text(encoding="utf-8").splitlines():
         assert not line.strip().startswith(("import ", "from ")), line
+
+
+def test_a_different_reagent_in_the_input_is_ejected_before_taking_the_next():
+    specimen = SimpleNamespace(stage="analyzed", recipe={"cryo_solvent": 3})
+    stray = SimpleNamespace(id="alkaline_buffer", count=2, properties=None)
+    owner, record, _ = lab(specimen=specimen, loaded={}, staged=[stray])
+    owner.load = stop_when(record, "load")
+    run(owner)
+    names = [entry[0] for entry in record]
+    assert ("input.eject", "alkaline_buffer", 2) in record
+    assert names.index("input.eject") < names.index("input.take")
+
+
+def test_loads_only_what_the_take_actually_moved():
+    specimen = SimpleNamespace(stage="analyzed", recipe={"cryo_solvent": 6})
+    owner, record, _ = lab(specimen=specimen, loaded={})
+    owner.input.take = lambda item, qty: record.append(("input.take", item, qty)) or ok(moved=2)
+    owner.load = lambda item, qty: record.append(("load", item, qty)) or _raise_stop()
+    run(owner)
+    assert ("load", "cryo_solvent", 2) in record
+
+
+def test_a_failed_take_from_the_collector_is_printed_as_a_warning():
+    owner, record, _ = lab(specimen=None)
+    owner.take_from = lambda collector: SimpleNamespace(status="source_busy", message="")
+    game = run(owner)
+    assert "warning: take_from source_busy\n" in game.printed
+
+
+def test_discard_input_empty_is_not_a_warning():
+    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
+    owner, record, output_items = lab(specimen=specimen, loaded={"alkaline_buffer": 2})
+    output_items.append(SimpleNamespace(id="sample_x", count=1, properties=None))
+    owner.discard = lambda: (
+        record.append(("discard",)) or SimpleNamespace(status="input_empty", message="")
+    )
+    owner.extract = lambda: record.append(("extract",)) or _raise_stop()
+    game = run(owner)
+    assert ("discard",) in record
+    assert not any(line.startswith("warning: discard") for line in game.printed)

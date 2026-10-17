@@ -8,18 +8,18 @@ Method, one specimen at a time:
     2. analyze it (reveals the recipe);
     3. if the output holds anything, ship it to Inventory first. Nothing else starts while the
        output is not empty, so extraction never runs into a full output;
-    4. take each missing reagent from Inventory into self.input, then load it;
+    4. stock each missing reagent from Inventory into self.input, then load what was actually
+       moved. The input port holds one reagent type at a time, so any other stack in it is
+       ejected to Inventory first;
     5. extract one sample; it lands in the output and is shipped on the next pass;
-    6. once the output is empty after a successful ship, discard the specimen. ASSUMPTION: one
-       sample per specimen. The manual does not say a specimen is used up. Check in game.
-A ship that fails (for example, Auto Feeders is not researched and send reports
-research_required) keeps the specimen and the output. The script warns and retries each
-PAUSE_SECONDS. Nothing is discarded that has not been shipped.
-Restart-safe: every pass re-reads the chamber, the output and loaded_reagents.
+    6. after a successful ship, discard the specimen unless it is already gone (the game
+       reports input_empty for that, which is expected once extraction has used it).
+Every blocked step is printed as a warning, at most once per PAUSE_SECONDS, so the log shows
+the cause. A refused ship keeps the specimen and the output, and is retried.
 API facts relied on (docs/game/biology.md): self.specimen (.stage, .recipe), self.take_from,
-    self.analyze, self.loaded_reagents, self.load, self.extract, self.discard, self.input.connect
-    and take, self.output.connect, stacks and send (.status), get_component, ItemStack .id
-    .count .properties, set_status, print, sleep.
+    self.analyze, self.loaded_reagents, self.load, self.extract, self.discard, self.input.connect,
+    take (.status, .moved), stacks and eject; self.output.connect, stacks and send (.status);
+    get_component, ItemStack .id .count .properties, set_status, print, sleep.
 """
 
 PAUSE_SECONDS = 60
@@ -47,6 +47,23 @@ def ship_output():
     return "ok"
 
 
+def clear_input_of(reagent_id):
+    """Eject any staged stack that is not the reagent we need, so the input port can latch to it."""
+    for stack in self.input.stacks():
+        if stack.id != reagent_id:
+            ejected = self.input.eject(
+                "inventory", stack.id, stack.count, stack.properties, "exact"
+            )
+            if ejected.status not in ("ok", "partial", "no_op"):
+                return ejected.status
+    return "ok"
+
+
+def warn(message):
+    print("warning: " + message)
+    set_status(message, "warn")
+
+
 while True:
     specimen = self.specimen
     if specimen is None:
@@ -56,44 +73,50 @@ while True:
             continue
         result = self.take_from(collector)
         if result.status != "ok":
-            set_status("take_from " + result.status, "info")
+            warn("take_from " + result.status)
             sleep(PAUSE_SECONDS)
         continue
 
     if specimen.stage == "collected":
         analysis = self.analyze()
         if analysis.status != "ok":
-            set_status("analyze " + analysis.status, "warn")
+            warn("analyze " + analysis.status)
             sleep(PAUSE_SECONDS)
         continue
 
     if len(self.output.stacks()) > 0:
         shipped = ship_output()
         if shipped == "ok":
-            self.discard()
+            discarded = self.discard()
+            if discarded.status not in ("ok", "input_empty"):
+                warn("discard " + discarded.status)
             set_status("sample shipped", "info")
         else:
-            print("warning: output not shipped (" + shipped + "), specimen kept")
-            set_status("output not shipped: " + shipped, "warn")
+            warn("output not shipped (" + shipped + "), specimen kept")
             sleep(PAUSE_SECONDS)
         continue
 
     reagent_id, quantity = first_missing(specimen.recipe or {}, self.loaded_reagents)
     if reagent_id is not None:
         self.input.connect("inventory")
-        taken = self.input.take(reagent_id, quantity)
-        if taken.status not in ("ok", "partial"):
-            set_status("stock " + reagent_id + ": " + taken.status, "warn")
+        cleared = clear_input_of(reagent_id)
+        if cleared != "ok":
+            warn("clear input: " + cleared)
             sleep(PAUSE_SECONDS)
             continue
-        loaded = self.load(reagent_id, quantity)
+        taken = self.input.take(reagent_id, quantity)
+        if taken.status not in ("ok", "partial") or taken.moved < 1:
+            warn("stock " + reagent_id + ": " + taken.status)
+            sleep(PAUSE_SECONDS)
+            continue
+        loaded = self.load(reagent_id, taken.moved)
         if loaded.status != "ok":
-            set_status("load " + loaded.status, "warn")
+            warn("load " + reagent_id + ": " + loaded.status)
             sleep(PAUSE_SECONDS)
         continue
 
     extracted = self.extract()
     if extracted.status != "ok":
-        set_status("extract " + extracted.status, "warn")
+        warn("extract " + extracted.status)
         sleep(PAUSE_SECONDS)
         continue
