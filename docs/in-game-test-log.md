@@ -41,14 +41,14 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 ### S-001: Solar tracker (`solar_1`)
 
-- Script: `scripts/main/solar_1.py` (self-contained, ADR-013). Library copy: `scripts/libs/solar_tracker.py` (tested source; not imported by the game).
+- Script: `scripts/main/solar_1.py` (self-contained, ADR-014). Rule: tilt = 90 - sun elevation, from `clock.get_elevation()`. Library copy: `scripts/libs/solar_tracker.py` (tested source; not imported by the game).
 - Where it runs: machine `solar_1`, a Solar Generator. Buy one from the Shop (500 cr) and name it `solar_1` if the id differs.
 - Setup state: sun up. Tilt is at 90 (rest) when the script starts.
-- How to run: Run Script in Game on `solar_1`. It re-searches every 300 s of game time.
-- Expected: status bar `tilt <N> deg` (info). `N` changes between searches as the sun moves. At night the status shows `tilt 90.0 deg`.
-- Expected behaviour: output (`get_output()`) is at or near its daytime maximum after each search. Tilt is never outside 0-90.
-- Pass criteria: no error status. Output rises to the peak after the first search. Stopping the script returns the panel to 90.
-- Open risk: settle time (1 s) is a guess. If output lags, the search picks a wrong tilt. Note the output value next to the status.
+- How to run: Run Script in Game on `solar_1`. It samples every 1/12 of a world hour (about 5 world minutes).
+- Expected: status bar `tilt <N> deg` (info). `N` = 90 minus the sun's elevation, so it drifts as the sun moves. At night the status shows `tilt 90.0 deg`.
+- Expected behaviour: `get_output()` is near the daytime maximum once the tilt has settled. Tilt is never outside 0-90.
+- Pass criteria: no error status. Output stays near its peak through the day. Stopping the script returns the panel to 90.
+- Open risk: the rule assumes the manual's geometry (tilt complements elevation). If output is low at midday, note the tilt and output values here.
 - Pre-req: sync `solar_tracker` Library is not needed (the script is self-contained). Shared Library research is not needed.
 
 | Date | Game version | Result | Notes |
