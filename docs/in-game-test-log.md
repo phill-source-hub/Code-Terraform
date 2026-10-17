@@ -55,6 +55,21 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
 
+## Atmosphere
+
+### O-001: Oxygen generator (`o2gen_1`, Mk I)
+
+- Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
+- Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
+- Run: Run Script in Game on `o2gen_1`.
+- Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>` (info), one pass per world minute. Console `dumped waste at <w>, penalty <p>` when waste reaches 50. Efficiency near 100% once waste is clean.
+- Pass: intake tracks CO2/10. Each dump happens at 50-60 with penalty 0.0. Waste never reaches 100. Stopping the script sets intake to 0.
+- Fail signs: `warning: set_intake ...` or `warning: dump ...` in the console; a penalty above 0 after a dump in the 50-60 window (paste the status line).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)
