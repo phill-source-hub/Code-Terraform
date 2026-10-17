@@ -54,6 +54,8 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
+| 2026-10-17 (afternoon, 78° sun) | fe9a45c | PASS (tracking) | Tilt 11° vs rule 12°: within the sampling lag at 1/12-hour sampling. Output 43/50 W, efficiency 87%. |
+| 2026-10-17 (morning, 90° sun, sample 1/60 h) | fe9a45c | PASS | Tilt 0°, output 50/50 W, efficiency 100%. Rule holds exactly. Efficiency falls with lower sun elevation, not only with tilt error (UNVERIFIED model). |
 
 ## Scanner and harvester
 
