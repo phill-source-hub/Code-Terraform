@@ -143,3 +143,10 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: the full manual (build fe9a45c, about 41,000 lines) is split by section into `docs/game/manual/` (421 files plus an index). The folder is git-ignored and never committed. Our short extracts in `docs/game/*.md` stay committed. This narrows ADR-010 for lookup: the full text is kept locally.
 - Why: the owner asked for the full manual to be in the repo for lookup. The repo is public on GitHub and the manual is the owner's game material, so committing it would publish it. Ignoring it keeps it local. The owner can reverse this by removing the ignore line.
+
+## ADR-024: Machine loops pause, except the pressure controller until its sweep is timed
+
+- Date: 2026-10-17
+- Decision: loops that poll state (o2gen_1) sleep one second per pass, as CLAUDE.md asks. pressure_1 and pressure_2 keep running with no sleep. The sync window of a pressure sweep is not measured yet, so a pause could miss it. Revisit once the sweep rate and window length are read in game.
+- Why: a sleep between reads could skip the only moment a window is open. Writing the window timing down here keeps the exception visible instead of silently breaking the rule.
+- Status: open. In-game timing check to be logged in `docs/in-game-test-log.md`.
