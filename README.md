@@ -63,7 +63,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
-| terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | L1+L2 pass, L3 pending |
+| terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |
 | probe_thermometer (`scanner_1.py`) | P-001 probe: version, component lookup, thermometer read | machine `scanner_1` (one-off) | L3 pending |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
