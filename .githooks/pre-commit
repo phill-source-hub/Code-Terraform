@@ -1,0 +1,12 @@
+#!/bin/sh
+# Runs the same checks as CI before every commit. Enable once per clone with:
+#   git config core.hooksPath .githooks
+# Skip with `git commit --no-verify` only when the owner asks; never to get past a failing test.
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -File tasks.ps1 check
+else
+    powershell -NoProfile -ExecutionPolicy Bypass -File tasks.ps1 check
+fi

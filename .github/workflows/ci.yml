@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev tools
+        run: python -m pip install -r requirements-dev.txt
+
+      # tasks.ps1 is the single source of truth for local and CI runs.
+      - name: Format, lint and test
+        shell: pwsh
+        run: ./tasks.ps1 check
