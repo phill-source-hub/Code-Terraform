@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from scripts.libs.relay_hack import solve
+from scripts.libs.relay_solver import solve
 
 
 def _lock(secret: list[int], calls: list[list[int]]):

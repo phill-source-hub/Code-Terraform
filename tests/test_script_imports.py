@@ -13,7 +13,11 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 LIBS = ROOT / "scripts" / "libs"
 GAME_SCRIPTS = sorted(
-    [*(ROOT / "scripts" / "main").glob("*.py"), *(ROOT / "scripts" / "contracts").glob("*.py")]
+    [
+        *(ROOT / "scripts" / "main").glob("*.py"),
+        *(ROOT / "scripts" / "contracts").glob("*.py"),
+        *(ROOT / "scripts" / "automations").glob("*.py"),
+    ]
 )
 LIBRARIES = sorted(LIBS.glob("*.py"))
 BUILTIN_MODULES = {"heapq"}

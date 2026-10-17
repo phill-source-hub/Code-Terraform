@@ -238,9 +238,9 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ## Scripts
 
-### power_monitor (PARKED in `scripts/parked/power_monitor.py`; was machine `harvester_1`)
+### power_monitor (SUPERSEDED by the base_watch Automation, ADR-029; was machine `harvester_1`)
 
-- Status: parked on 2026-10-17 (ADR-017). Needs a free machine slot to run again. The results below stand for the monitor's last run.
+- Status: removed from the repo on `feat/base-watch-automation` (ADR-029). The check below is the last run of the old monitor; base_watch has its own checklist (section "base_watch").
 
 - Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.
@@ -291,3 +291,40 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        | Pending Signal Bus research and owner go-ahead for sync. |
+
+## base_watch (Automation, ADR-029, branch feat/base-watch-automation)
+
+- Install: paste `scripts/automations/base_watch.py` into a new Automation (Ship Computer > Automations > + New Automation). Needs Automations research.
+- Check 1 (healthy): status bar shows `base ok`; console prints `base ok` once.
+- Check 2 (deficit): take a grid into deficit (for example switch off a generator with load on). Console prints `warning: power deficit: net <N> W` once; the status turns to a warning.
+- Check 3 (heartbeat): with harvester_1 deployed, stop its script for over 60 game seconds. Console prints `warning: harvester_1: silent for <N> s` once. Restart it, and the line clears to `base ok`.
+- Check 4 (bus): Computer > Signal Bus > Broadcasts shows `base.alerts` matching the console alert list.
+- Check 5 (imports, UNVERIFIED for automations): the script imports `base_watch` and `power_status` from `lib/`. If the log shows `ImportError` or `ModuleNotFoundError`, Libraries do not work from an Automation; inline the rules or report it.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Pending owner paste and Automations research. Check 5 is the first open question. |
+
+## Full sync, 2026-10-17 (nine conflict files replaced with latest repo versions)
+
+- Game files replaced: harvester_1, o2gen_1, o2gen_2, o2gen_3, pressure_3, relay_hack, solar_1, solar_2, solar_3. Pre-sync copies saved in `.sync-pull/backup-2026-10-17/` (gitignored). `automation_1.py` (base_watch) written.
+- Result, from `logs/all.log` (UTC 22:37:57): `scanner_1.py` stopped: `ModuleNotFoundError: No module named 'grid'`. The file `lib/grid.py` exists and matches the repo. Cause not yet known. Possible: the game loads Libraries only at start, so a restart or a Run Script is needed. Next step: restart the game or run `scanner_1` by hand. If `grid` still fails, Library imports do not work at runtime in this build; then inline `grid` into `scanner_1` and `harvester_1` (ADR-025 rollback).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 22:37Z | fe9a45c | FAIL | scanner_1 `No module named 'grid'`. Pending restart test. |
+
+| 2026-10-17 22:51Z | fe9a45c | FAIL | Restart of scanner_1: same `No module named 'grid'` at line 24. Library imports fail at runtime in this build for this file. Next: inline `grid` (ADR-025 rollback) or check whether the import works in another script. |
+
+## Library imports, after relay_solver rename (ADR-030), 2026-10-18
+
+Libraries created in game by the owner: power_status, solar_tracker, grid, trip_log, job_queue, base_watch, relay_solver.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 23:01Z | fe9a45c | PASS | `relay_hack` contract re-run: `already_completed_correct transmitter.transmit completed with status "already_completed_correct"`. Imports `relay_solver`. |
+| 2026-10-17 22:52Z+ | fe9a45c | PASS (no errors) | `scanner_1` (`grid`), `solar_1`, `solar_2`, `solar_3` (`solar_tracker`) restarted by owner. No "Script stopped" lines since. Scanner logs only found items and solar logs nothing, so the log cannot confirm they run; owner reports them running. |
+| — | fe9a45c | PENDING | `harvester_1` (`grid`, `job_queue`, `trip_log`): idle, not yet started. |
+| — | fe9a45c | PENDING | `automation_1` (`base_watch`, `power_status`): not yet checked in log. |
+
+| 2026-10-17 23:02Z | fe9a45c | PASS (imports) | `automation_1` (base_watch) prints `base ok`, no errors. `base_watch` and `power_status` imports work. Heartbeat path NOT yet confirmed: `base ok` also shows when Signal Bus (`comms`) is not researched, which skips heartbeat checks. Recheck after Signal Bus research. |

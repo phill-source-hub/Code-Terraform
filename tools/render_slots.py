@@ -22,14 +22,19 @@ MAIN = ROOT / "scripts" / "main"
 TOKEN = "__SLOT__"
 
 # Slot ids as the game names machine slots: lower case, underscore, number (e.g. solar_2).
-SLOT_PATTERN = re.compile(r"^[a-z]+_[0-9]+$")
+SLOT_PATTERN = re.compile(r"^[a-z][a-z0-9]*_[0-9]+$")
 
 # Which template each machine slot is generated from.
 SLOTS = {
     "solar_1": "solar_slot.py",
     "solar_2": "solar_slot.py",
+    "solar_3": "solar_slot.py",
     "pressure_1": "pressure_slot.py",
     "pressure_2": "pressure_slot.py",
+    "pressure_3": "pressure_slot.py",
+    "o2gen_1": "o2gen_slot.py",
+    "o2gen_2": "o2gen_slot.py",
+    "o2gen_3": "o2gen_slot.py",
 }
 
 

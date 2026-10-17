@@ -18,7 +18,7 @@ Items deferred on purpose. Each one names the trigger that makes it active.
 
 - Trigger: Shared Library researched (done 2026-10-17) and an owner go-ahead for a game sync.
 - Status: repo done on `refactor/shared-libs` (ADR-025). Not yet in game: needs the owner's go-ahead for `sync_to_game.py apply`, then the in-game checklist. The parked power monitor copy is removed by the Automation work, not migrated.
-- To do, in order: 1. Sync `scripts/libs/` first so `lib/` exists in the game. 2. `solar_1.py` and `solar_2.py` import `solar_tracker`. 3. `scripts/contracts/relay_hack.py` imports `relay_hack`. 4. `scripts/parked/power_monitor.py` imports `power_status` when it returns to a slot. 5. Delete the copy-parity tests (`tests/test_solar_copies.py`, the relay parity check in `tests/test_relay_hack_script.py`) and add a test that the game-style import resolves. 6. Log each change in `docs/in-game-test-log.md`.
+- To do, in order: 1. Sync `scripts/libs/` first so `lib/` exists in the game. 2. `solar_1.py` and `solar_2.py` import `solar_tracker`. 3. `scripts/contracts/relay_hack.py` imports `relay_hack`. 4. (Superseded by ADR-029: the parked power monitor is the base_watch Automation, which imports `power_status`.) 5. Delete the copy-parity tests (`tests/test_solar_copies.py`, the relay parity check in `tests/test_relay_hack_script.py`) and add a test that the game-style import resolves. 6. Log each change in `docs/in-game-test-log.md`.
 - Notes: Libraries must not use `self` or `panel` (manual, Imports & Libraries).
 
 ## B-003: Shared grid helpers

@@ -1,6 +1,6 @@
 """Pure solver for the Orbital Relay Hack contract. No game calls here.
 
-Where it runs: Library, imported by the contract script (game `lib/relay_hack.py`).
+Where it runs: Library named `relay_solver` in game (ADR-030), imported by the contract script.
 Inputs: a `probe` callable (the game's `lock.intercept`), tumbler count, and range per tumbler.
 Assumptions: each tumbler has exactly one correct value; `intercept` reports each tumbler
     independently. The contract statement does not say `intercept` has an attempt limit
