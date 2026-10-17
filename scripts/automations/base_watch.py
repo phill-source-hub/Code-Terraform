@@ -18,8 +18,9 @@ from base_watch import heartbeat_alerts, status_text
 from power_status import classify, summarize_grids
 
 POLL_SECONDS = 5
-# A heartbeat older than this is treated as a stopped machine (about a minute of game time).
-STALE_SECONDS = 60
+# A heartbeat older than this is treated as a stopped machine. Four heartbeat steps
+# (scripts/libs/pacing.py), so a machine that is resting still posts in time (ADR-031).
+STALE_SECONDS = 120
 HEARTBEAT_SLOTS = ["harvester_1", "scanner_1"]
 ALERT_CHANNEL = "base.alerts"
 

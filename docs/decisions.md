@@ -197,3 +197,10 @@ Short, newest last. Format: date, decision, why.
 - Decision: `scripts/libs/relay_hack.py` is renamed `scripts/libs/relay_solver.py`, and the game Library is named `relay_solver`. The contract script keeps the name `relay_hack`, since the contract id and script name are the game's own.
 - Why: the game refused `relay_hack` as a Library name ("reserved name in-game"). The other six Library names were accepted.
 - Status: repo side done. Owner creates Library `relay_solver` in game before the contract is synced, since the contract imports it.
+
+## ADR-031: Resting machines post a heartbeat in steps
+
+- Date: 2026-10-18
+- Decision: a rest (scanner repeat, harvester cool-down) is split into steps of HEARTBEAT_STEP_SECONDS (30 game s) by `scripts/libs/pacing.py`, and the machine posts `status.<slot>` after each step. The scanner also posts after each sector. The base watch limit is STALE_SECONDS = 120 (four steps).
+- Why: the in-game base watch showed `scanner_1: silent for 64 s` on the Signal Bus. The scanner posted once per pass and then slept an hour, so the watch saw it as stopped for most of every hour. The 60 s limit was also shorter than the scanner's rest step.
+- Status: repo side done. In-game check: watch `base.alerts` stay empty during a scanner rest.

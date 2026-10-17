@@ -213,7 +213,8 @@ def test_the_archive_is_looked_up_again_each_pass():
         def sleep(self, seconds, /):
             super().sleep(seconds)
             self.sleeps += 1
-            if self.sleeps == 2:
+            # One hour of rest is 120 heartbeat steps; the second pass starts after the 120th.
+            if self.sleeps == 121:
                 raise _Stop
 
     game = ArchiveUnlocksAfterPassOne()
@@ -235,7 +236,28 @@ def test_the_archive_is_looked_up_again_each_pass():
 
 
 def test_repeats_after_one_world_hour():
-    _, _, game = run_grid(seconds=720.0)
+    # Stops once the rest has run its full length, which is the start of the next pass.
+    class _UntilRestEnds(FakeGame):
+        def sleep(self, seconds, /):
+            super().sleep(seconds)
+            if self.clock.now >= 720.0:
+                raise _Stop
+
+    game = _UntilRestEnds()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 720.0}
+    )
+    game.components["notebook"] = _notebook([])
+    owner = SimpleNamespace(
+        scan=lambda name: SimpleNamespace(status="empty", message="", name=None, value=None)
+    )
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
     assert game.clock.now == 720.0
 
 
@@ -275,3 +297,38 @@ def test_a_finished_pass_is_announced_after_its_map_and_counter_are_saved():
     assert bus.saves_at_announcement == 2
     assert bus.latest("scan.ready") == 1
     assert bus.latest("status.scanner_1") == {"pass": 1}
+
+
+def test_every_sector_posts_a_heartbeat_so_a_slow_row_is_not_seen_as_stopped():
+    beats: list = []
+
+    class _Beats(FakeSignalBus):
+        def broadcast(self, channel, value):
+            if channel == "status.scanner_1":
+                beats.append(value)
+            return super().broadcast(channel, value)
+
+    saves: list = []
+    game = StopOnSleep()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
+    )
+    game.components["notebook"] = _notebook(saves)
+    game.components["comms"] = _Beats().as_component()
+    owner = SimpleNamespace(
+        scan=lambda name: SimpleNamespace(status="empty", message="", name=None, value=None)
+    )
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
+    assert len(beats) >= 192
+
+
+def test_the_repeat_wait_is_split_into_heartbeat_steps():
+    # A full hour of rest: 120 steps of 30 s, each followed by a heartbeat.
+    _, _, game = run_grid(seconds=3600.0)
+    assert game.clock.now == 30.0

@@ -35,6 +35,7 @@ API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, 
 
 from grid import parse_sector, plan_routes, sector_id
 from job_queue import pick_job
+from pacing import HEARTBEAT_STEP_SECONDS, split_sleep
 from trip_log import is_done, mark_done, reconcile
 
 HOT_HEAT = 80
@@ -86,6 +87,13 @@ def report(bus, heat):
         bus.broadcast("status.harvester_1", {"heat": heat})
 
 
+def rest(seconds):
+    # Cool-downs last an hour; heartbeats in steps keep the base watch from calling this stopped.
+    for step in split_sleep(seconds, HEARTBEAT_STEP_SECONDS):
+        sleep(step)
+        report(comms, self.get_heat())
+
+
 def stored_log(archive):
     if archive is None:
         return None
@@ -107,11 +115,11 @@ while True:
     report(comms, self.get_heat())
     if self.get_heat() >= HOT_HEAT:
         set_status("cooling", "warn")
-        sleep(cool_seconds)
+        rest(cool_seconds)
         continue
     if scanner is None:
         set_status("scanner_1 not found", "error")
-        sleep(cool_seconds)
+        rest(cool_seconds)
         continue
 
     if self.get_held() != "":
@@ -120,7 +128,7 @@ while True:
             print("stored " + str(stored.item_id) + " (was held) heat " + str(self.get_heat()))
         else:
             set_status("store " + stored.status, "warn")
-            sleep(SHORT_SECONDS)
+            rest(SHORT_SECONDS)
         continue
 
     trip_log = reconcile(trip_log, current_pass(notebook, comms))
@@ -131,7 +139,7 @@ while True:
     ]
     if not items:
         set_status("no items to collect", "info")
-        sleep(SHORT_SECONDS * 12)
+        rest(SHORT_SECONDS * 12)
         continue
 
     costs, first_step = plan_routes(position, items)
@@ -143,7 +151,7 @@ while True:
             affordable.append((heat, steps, name))
     if not affordable:
         set_status("cooling before the next trip", "warn")
-        sleep(cool_seconds)
+        rest(cool_seconds)
         continue
 
     # A queued job that is reachable this pass beats the planner's own pick (queue order).
@@ -167,23 +175,23 @@ while True:
                 )
             else:
                 set_status("store " + stored.status, "warn")
-                sleep(SHORT_SECONDS)
+                rest(SHORT_SECONDS)
         elif pickup.status == "empty":
             trip_log = save_log(notebook, mark_done(trip_log, target_name))
         elif pickup.status == "overheated":
-            sleep(cool_seconds)
+            rest(cool_seconds)
         else:
             set_status("collect " + pickup.status, "info")
-            sleep(SHORT_SECONDS)
+            rest(SHORT_SECONDS)
         continue
 
     step = first_step[target]
     moved = self.move(sector_id(step[0], step[1]))
     if moved.status == "overheated":
-        sleep(cool_seconds)
+        rest(cool_seconds)
     elif moved.status in ("moving", "busy"):
-        sleep(SHORT_SECONDS)
+        rest(SHORT_SECONDS)
     elif moved.status not in ("ok", "already_here"):
         trip_log = save_log(notebook, mark_done(trip_log, target_name))
         set_status("move " + moved.status + " to " + target_name, "warn")
-        sleep(SHORT_SECONDS)
+        rest(SHORT_SECONDS)

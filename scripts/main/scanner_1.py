@@ -22,6 +22,7 @@ API facts relied on (docs/game/harvester.md and manual Data Archive): self.scan(
 """
 
 from grid import snake_order
+from pacing import HEARTBEAT_STEP_SECONDS, split_sleep
 
 MAP_KEY = "scanner.map"
 PASS_KEY = "scanner.pass"
@@ -55,6 +56,19 @@ def save_map(archive, grid_map, pass_number):
         set_status("pass save " + counted.status + ": " + counted.message, "warn")
 
 
+def beat(bus, pass_number):
+    # Posted per sector and during rest, so the base watch sees a running scanner (ADR-031).
+    if bus is not None:
+        bus.broadcast("status.scanner_1", {"pass": pass_number})
+
+
+def rest(seconds, bus, pass_number):
+    # Sleep in short steps with a heartbeat each step; one long sleep would look like a stop.
+    for step in split_sleep(seconds, HEARTBEAT_STEP_SECONDS):
+        sleep(step)
+        beat(bus, pass_number)
+
+
 def announce(bus, pass_number):
     # After the map is saved: a harvester that reads the announcement finds its map ready.
     if bus is not None:
@@ -71,6 +85,7 @@ while True:
     for name, _ in snake_order():
         result = self.scan(name)
         grid_map[name] = {"status": result.status, "name": result.name, "value": result.value}
+        beat(comms, pass_number)
         if result.status == "ok":
             print(name + ": " + result.name)
         elif result.status != "empty":
@@ -78,4 +93,4 @@ while True:
     save_map(notebook, grid_map, pass_number)
     announce(comms, pass_number)
     set_status("map of " + str(len(grid_map)) + " sectors saved", "info")
-    sleep(repeat_seconds)
+    rest(repeat_seconds, comms, pass_number)
