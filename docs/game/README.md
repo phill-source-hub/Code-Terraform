@@ -16,6 +16,7 @@
 | `drone.md` | drones, fleet, drone service station, weather collection |
 | `contracts.md` | contracts, transmitter, contract statuses, shop and commander calls |
 | `contracts-terminal-breach.md` | Alien Terminal Breach (`terminal_breach`): guess feedback, code length, answer format |
+| `contracts-data-tablet.md` | Underground Data Tablet (`data_tablet`): probe, grid size, answer format |
 
 ## Not yet extracted
 

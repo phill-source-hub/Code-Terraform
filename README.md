@@ -70,6 +70,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
 | terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |
+| data_tablet (contract) | Read distance-0 probe cells of a 30x30 tablet, transmit the message | contract `data_tablet` | Done (X-003 PASS) |
 | probe_thermometer (`scanner_1.py`) | P-001 probe: version, component lookup, thermometer read | machine `scanner_1` (one-off) | L3 pending |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
