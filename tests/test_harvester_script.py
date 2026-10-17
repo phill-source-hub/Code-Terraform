@@ -23,10 +23,20 @@ def ok_item(name="Soil Sample"):
     return SimpleNamespace(status="ok", message="", id="soil_sample", name=name, value=50)
 
 
-def harvester(heat=0, move_status="ok", collect_status="ok", store_status="ok", record=None):
+def harvester(
+    heat=0,
+    move_status="ok",
+    collect_status="ok",
+    store_status="ok",
+    record=None,
+    position="E13",
+    held="",
+):
     record = record if record is not None else []
     return SimpleNamespace(
         get_heat=lambda: heat,
+        get_position=lambda: position,
+        get_held=lambda: held,
         move=lambda sector: (
             record.append(("move", sector)) or SimpleNamespace(status=move_status, message="")
         ),
@@ -93,23 +103,25 @@ def test_collects_then_stores_when_standing_on_the_item():
 
 
 def test_marks_empty_cells_done_and_does_not_store():
+    # Only item is the cell the harvester stands on, and it is empty: collect, do not store, sleep.
     owner, record = harvester(collect_status="empty")
-    owner.move = lambda sector: (
-        record.append(("move", sector)) or SimpleNamespace(status="ok", message="")
-    )
-    owner.collect = lambda: (
-        record.append(("collect",)) or SimpleNamespace(status="empty", message="")
-    )
-    snapshot = {"E13": ok_item(), "E14": ok_item()}
-    run(owner, snapshot)
+    game = run(owner, {"E13": ok_item()})
     assert ("store",) not in record
+    assert game.statuses[-1] == ("no items to collect", "info")
 
 
-def test_holding_item_is_stored_first():
-    owner, record = harvester(collect_status="holding")
+def test_held_item_is_stored_before_anything_else():
+    owner, record = harvester(held="soil_sample")
     owner.store = lambda: record.append(("store",)) or _stop_now()
-    run(owner, {"E13": ok_item()})
-    assert record[0] == ("collect",) and record[1] == ("store",)
+    run(owner, {"E14": ok_item()})
+    assert record == [("store",)]
+
+
+def test_starts_from_the_position_the_game_reports_not_e13():
+    owner, record = harvester(position="H24")
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"H23": ok_item()})
+    assert record == ["H23"]
 
 
 def test_hot_harvester_cools_and_does_not_move():

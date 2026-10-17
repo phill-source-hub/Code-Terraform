@@ -76,7 +76,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Run: Run Script in Game on `harvester_1`.
 - Expected: moves one cell per pass toward the nearest item (row first, then column). On arrival: collect, then `stored <item_id> from <sector>` printed. Heat stays under 80; status `cooling` appears above that.
 - Pass: the first item is collected and stored; the harvester moves between items without refusal; no `move too_far` warnings.
-- Assumption to check: start cell E13. If the first move is refused, the harvester is not where we think; paste the status.
+- Position is read from the game each pass (`get_position`), so the start cell does not matter. Check the first move's sector in the log matches the harvester's real position.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|

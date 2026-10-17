@@ -103,3 +103,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: the sync tool normalises CRLF to LF before hashing, comparing and writing. Repo files can have CRLF from Windows text writes. Game files have LF.
 - Why: byte comparison reported false conflicts (game and repo identical except for line endings). Re-based state entries were checked against game bytes before applying.
+
+## ADR-019: Harvester reads its position and held item from the game
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` calls `self.get_position()` and `self.get_held()` every pass instead of assuming E13 or tracking moves. A held item is stored first.
+- Why: a new save, or a later game point, need not start at E13. The manual gives both methods, and the held-slot check is its documented first step for a collect loop.

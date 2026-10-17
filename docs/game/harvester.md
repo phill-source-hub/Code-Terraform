@@ -22,6 +22,7 @@ Source: owner-supplied in-game DOCS text for `scanner_1` and `harvester_1` (buil
 
 ## Our assumptions (UNVERIFIED in game)
 
-- Starting cell is E13. The save shows the harvester at `posRow 4, posCol 12` (0-based), which is E13. The script tracks its own position from successful moves. A restart resets to E13.
+- Position: the script reads `self.get_position()` every pass (manual: current sector id). It assumes nothing about the start cell, since a new save or later game state may differ.
+- Held item: `self.get_held()` is read every pass; a held item is stored first (manual: empty string when the slot is empty).
 - Hour-long cooling uses `clock.real_seconds_per_hour()`. Sleep units are game seconds (see `docs/api-notes.md`).
 - Scanner re-sweeps every world hour. The manual does not say whether sectors refill.

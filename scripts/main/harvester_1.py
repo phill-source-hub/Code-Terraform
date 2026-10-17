@@ -3,21 +3,22 @@
 Where it runs: machine script slot `harvester_1` (self = this harvester). The harvester has its
     own heat budget and does not draw from the base battery.
 Self-contained on purpose (ADR-014): no imports.
-Starting cell: E13 (base), from the save's harvester position (posRow 4, posCol 12).
-    The script tracks its own position from successful moves. A restart resets to E13.
+Position: read from the game every pass with self.get_position(). Nothing is assumed about the
+    start cell, because a new save or a later point in the game may not start at E13.
+Held item: read with self.get_held() first, every pass. A held item is stored before anything
+    else (the manual's first line of a collect loop).
 Loop, one step per pass (manual: harvester_1, "start with one nearby scanned item"):
     1. cool down if heat is at or above HOT_HEAT (sleep one world hour);
-    2. read the scanner snapshot and pick the nearest "ok" item not yet collected;
-    3. if standing on it, collect, then store; otherwise move one cardinal cell toward it.
-Held item: collect returns "holding" while an item is in the held slot. The script stores it first.
+    2. store any held item;
+    3. read the scanner snapshot and pick the nearest "ok" item not yet collected;
+    4. if standing on it, collect, then store; otherwise move one cardinal cell toward it.
 Failure: busy or moving statuses wait SHORT_SECONDS. A refused move (invalid, too_far) drops the
     target. A full inventory waits. Every blocked path shows a status and sleeps.
-API facts relied on (docs/game/harvester.md): self.move, self.collect, self.store, self.get_heat,
-    get_component("scanner_1").get_scanned(), get_component("clock"), set_status, print, sleep.
+API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, self.get_heat,
+    self.move, self.collect, self.store, get_component("scanner_1").get_scanned(),
+    get_component("clock"), set_status, print, sleep.
 """
 
-BASE_ROW = 4
-BASE_COL = 12
 HOT_HEAT = 80
 SHORT_SECONDS = 5
 
@@ -47,7 +48,6 @@ cool_seconds = 3600
 if clock is not None:
     cool_seconds = clock.real_seconds_per_hour()
 
-position = (BASE_ROW, BASE_COL)
 done = []
 
 while True:
@@ -60,6 +60,16 @@ while True:
         sleep(cool_seconds)
         continue
 
+    if self.get_held() != "":
+        stored = self.store()
+        if stored.status == "ok":
+            print("stored " + str(stored.item_id) + " (was held)")
+        else:
+            set_status("store " + stored.status, "warn")
+            sleep(SHORT_SECONDS)
+        continue
+
+    position = parse_sector(self.get_position())
     snapshot = scanner.get_scanned()
     candidates = [name for name in snapshot if snapshot[name].status == "ok" and name not in done]
     if not candidates:
@@ -72,16 +82,14 @@ while True:
 
     if position == target:
         pickup = self.collect()
-        if pickup.status == "ok" or pickup.status == "holding":
+        if pickup.status == "ok":
+            done.append(target_name)
             stored = self.store()
             if stored.status == "ok":
                 print("stored " + str(stored.item_id) + " from " + target_name)
             else:
                 set_status("store " + stored.status, "warn")
                 sleep(SHORT_SECONDS)
-                continue
-            if pickup.status == "ok":
-                done.append(target_name)
         elif pickup.status == "empty":
             done.append(target_name)
         elif pickup.status == "overheated":
@@ -93,13 +101,11 @@ while True:
 
     step = next_step(position, target)
     moved = self.move(sector_id(step[0], step[1]))
-    if moved.status == "ok" or moved.status == "already_here":
-        position = step
-    elif moved.status == "overheated":
+    if moved.status == "overheated":
         sleep(cool_seconds)
     elif moved.status in ("moving", "busy"):
         sleep(SHORT_SECONDS)
-    else:
+    elif moved.status not in ("ok", "already_here"):
         done.append(target_name)
         set_status("move " + moved.status + " to " + target_name, "warn")
         sleep(SHORT_SECONDS)
