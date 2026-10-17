@@ -175,3 +175,10 @@ Short, newest last. Format: date, decision, why.
 - Why: the game needs one file per slot, but the two copies were kept equal only by a text-replace test. A generator makes the template the single source, and the drift test makes a hand edit visible.
 - Supersedes: the duplicate-file rule of ADR-014 for these controllers.
 - Status: repo side done. Slot files unchanged in content. Sync is unchanged (it still copies `scripts/main/`).
+
+## ADR-028: Signal Bus carries jobs, announcements and heartbeats; no script blocks on it
+
+- Date: 2026-10-17
+- Decision: the harvester takes a sector from `jobs.collect` only when that sector is reachable this pass, using pending + receive by id. The scanner announces each finished pass on `scan.ready` after its map is saved. Both scripts broadcast a heartbeat (`status.<slot>`). No script uses `wait`, `wait_any` or `wait_broadcast`.
+- Why: a blocking wait stops the planner, and the scanner and harvester must keep moving or scanning. A job that is not reachable is left in the queue for later, so the rule never drops work. The announcement lets the harvester reset its log without the Data Archive, which needs separate research.
+- Status: repo side done. Game behaviour is UNVERIFIED until the Signal Bus checklist (`docs/in-game-test-log.md`) passes. Scripts run unchanged when Signal Bus research is missing.

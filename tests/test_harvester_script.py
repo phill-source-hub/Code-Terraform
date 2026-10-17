@@ -4,6 +4,7 @@ from contextlib import suppress
 from pathlib import Path
 from types import SimpleNamespace
 
+from tests.harness.fake_comms import FakeSignalBus
 from tests.harness.fake_game import FakeComponent, FakeGame, run_script
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "main" / "harvester_1.py"
@@ -245,3 +246,69 @@ def test_without_the_archive_the_visited_log_is_kept_for_this_run_only():
     owner, record = harvester(collect_status="empty")
     game = run(owner, {"E13": ok_item()})
     assert game.statuses[-1] == ("no items to collect", "info")
+
+
+def _bus(queued=None):
+    """A fake Signal Bus. `queued` maps a channel name to values sent to it, oldest first."""
+    bus = FakeSignalBus()
+    for channel, values in (queued or {}).items():
+        for value in values:
+            bus.send(channel, value)
+    return bus
+
+
+def _game_with_bus(bus):
+    game = StopOnSleep()
+    game.components["comms"] = bus.as_component()
+    return game
+
+
+def test_a_reachable_queued_job_beats_the_planner_pick():
+    # Planner would collect E13 under the harvester. The job for E15 (reachable) wins: step E14.
+    bus = _bus({"jobs.collect": ["E15"]})
+    owner, record = harvester()
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"E13": ok_item(), "E15": ok_item()}, game=_game_with_bus(bus))
+    assert record == ["E14"]
+
+
+def test_a_job_for_an_unscanned_sector_is_left_queued_and_the_planner_decides():
+    bus = _bus({"jobs.collect": ["H24"]})
+    owner, record = harvester()
+    owner.collect = lambda: record.append(("collect",)) or _stop_now()
+    run(owner, {"E13": ok_item()}, game=_game_with_bus(bus))
+    assert record == [("collect",)]
+    assert [m.value for m in bus.pending("jobs.collect")] == ["H24"]
+
+
+def test_a_taken_job_is_consumed_from_the_queue():
+    bus = _bus({"jobs.collect": ["E15"]})
+    owner, record = harvester()
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"E15": ok_item()}, game=_game_with_bus(bus))
+    assert bus.pending("jobs.collect") == []
+
+
+def test_each_pass_broadcasts_the_harvesters_heat():
+    bus = _bus()
+    owner, _ = harvester(heat=12)
+    run(owner, {}, game=_game_with_bus(bus))
+    assert bus.latest("status.harvester_1") == {"heat": 12}
+
+
+def test_a_scan_ready_announcement_restarts_the_visited_log():
+    bus = _bus()
+    bus.broadcast("scan.ready", 5)
+    game = _game_with_bus(bus)
+    game.components["notebook"] = _archive({"harvester.done": {"pass": 4, "sectors": ["E13"]}}, [])
+    owner, record = harvester()
+    owner.collect = lambda: record.append(("collect",)) or _stop_now()
+    run(owner, {"E13": ok_item()}, game=game)
+    assert record == [("collect",)]
+
+
+def test_without_signal_bus_the_harvester_runs_as_before():
+    owner, record = harvester()
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"E14": ok_item()})
+    assert record == ["E14"]

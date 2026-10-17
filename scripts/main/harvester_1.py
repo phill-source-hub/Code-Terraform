@@ -24,16 +24,22 @@ Loop, one step per pass:
     4. if standing on it, collect, then store; otherwise move one cardinal cell along the path.
 Failure: busy or moving statuses wait SHORT_SECONDS. A refused move (invalid, too_far) drops the
     target. A full inventory waits. Every blocked path shows a status and sleeps.
+Signal Bus (docs/game/signal-bus.md, optional): takes a job from `jobs.collect` when it is reachable
+    this pass; broadcasts `status.harvester_1` with its heat each pass; reads the scanner's
+    `scan.ready` pass number. Without Signal Bus research the script runs as before.
 API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, self.get_heat,
     self.move, self.collect, self.store, get_component("scanner_1").get_scanned(),
-    get_component("clock"), set_status, print, sleep.
+    get_component("clock"), set_status, print, sleep. Signal Bus: comms.pending, receive,
+    broadcast, latest (docs/game/signal-bus.md).
 """
 
 from grid import parse_sector, plan_routes, sector_id
+from job_queue import pick_job
 from trip_log import is_done, mark_done, reconcile
 
 HOT_HEAT = 80
 SHORT_SECONDS = 5
+JOB_CHANNEL = "jobs.collect"
 
 
 scanner = get_component("scanner_1")
@@ -43,12 +49,41 @@ if clock is not None:
     cool_seconds = clock.real_seconds_per_hour()
 
 notebook = get_component("notebook")
+comms = get_component("comms")
 
 
-def current_pass(archive):
+def archive_pass(archive):
     if archive is None:
         return 0
     return archive.get("scanner.pass", 0)
+
+
+def current_pass(archive, bus):
+    # The scanner announces each finished pass on the bus, which works without Data Archive.
+    if bus is not None:
+        announced = bus.latest("scan.ready")
+        if isinstance(announced, int):
+            return announced
+    return archive_pass(archive)
+
+
+def take_job(bus, allowed):
+    # Non-blocking: `wait` would stop the planner until a job arrives, so pending/receive is used.
+    if bus is None:
+        return None
+    entries = [(message.id, message.value) for message in bus.pending(JOB_CHANNEL)]
+    picked = pick_job(entries, allowed)
+    if picked is None:
+        return None
+    received = bus.receive(JOB_CHANNEL, picked)
+    if received.status == "ok":
+        return received.packet.value
+    return None
+
+
+def report(bus, heat):
+    if bus is not None:
+        bus.broadcast("status.harvester_1", {"heat": heat})
 
 
 def stored_log(archive):
@@ -66,9 +101,10 @@ def save_log(archive, log):
     return log
 
 
-trip_log = reconcile(stored_log(notebook), current_pass(notebook))
+trip_log = reconcile(stored_log(notebook), current_pass(notebook, comms))
 
 while True:
+    report(comms, self.get_heat())
     if self.get_heat() >= HOT_HEAT:
         set_status("cooling", "warn")
         sleep(cool_seconds)
@@ -87,7 +123,7 @@ while True:
             sleep(SHORT_SECONDS)
         continue
 
-    trip_log = reconcile(trip_log, current_pass(notebook))
+    trip_log = reconcile(trip_log, current_pass(notebook, comms))
     position = parse_sector(self.get_position())
     snapshot = scanner.get_scanned()
     items = [
@@ -110,7 +146,9 @@ while True:
         sleep(cool_seconds)
         continue
 
-    target_name = min(affordable)[2]
+    # A queued job that is reachable this pass beats the planner's own pick (queue order).
+    job = take_job(comms, [name for _, _, name in affordable])
+    target_name = job if job is not None else min(affordable)[2]
     target = parse_sector(target_name)
 
     if position == target:

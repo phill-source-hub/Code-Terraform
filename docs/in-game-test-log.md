@@ -279,3 +279,15 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        | Pending Data Archive research and owner go-ahead for sync. |
+
+## Signal Bus (ADR-028, branch feat/signal-bus-wiring)
+
+- Needs: Signal Bus research. Until then `get_component("comms")` is None and scripts skip all bus calls.
+- Check 1 (announce): after one scanner pass, `scan.ready` = 1 and `status.scanner_1` = `{"pass": 1}` in Computer > Signal Bus (Broadcasts).
+- Check 2 (heartbeat): `status.harvester_1` shows `{"heat": N}` and changes as heat changes.
+- Check 3 (job): from Computer > Signal Bus, queue the plain text `E15` on `jobs.collect` (a scanned sector). The harvester moves toward it when it is reachable this pass, and the message is gone from the queue once taken.
+- Check 4 (unreachable job): send `H24` while H24 is not scanned. The message stays queued and the harvester collects its own pick.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Pending Signal Bus research and owner go-ahead for sync. |
