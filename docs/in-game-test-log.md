@@ -18,6 +18,25 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 |      |              |        |       |
 
+## Probes
+
+### P-001: version, component lookup, thermometer read
+
+- Script: `scripts/probes/probe_thermometer.py`
+- Where it runs: attach to a machine script slot or use Run Script in Game. Read-only.
+- Setup state: save open, game unpaused. No power needed for the thermometer (`powered: true` in the save).
+- How to run: copy the file into the game's scripts folder as a machine script (name it for a machine with a script slot, see the open question in README), then Run Script in Game. Do not overwrite an existing script you want to keep.
+- Expected console output (4 lines; the last line is a number in Celsius, any value is fine):
+  1. `game version: <build string>`
+  2. `thermometer found: True`
+  3. `type_id: thermometer`
+  4. `surface temp (C): <float>`
+- Expected behaviour: no machine state changes; script ends.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      |              |        |       |
+
 ## Scripts
 
-No scripts yet. The first checklist comes with the first example script.
+No game scripts yet. The first checklist comes with the first example script.
