@@ -304,3 +304,12 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        | Pending owner paste and Automations research. Check 5 is the first open question. |
+
+## Full sync, 2026-10-17 (nine conflict files replaced with latest repo versions)
+
+- Game files replaced: harvester_1, o2gen_1, o2gen_2, o2gen_3, pressure_3, relay_hack, solar_1, solar_2, solar_3. Pre-sync copies saved in `.sync-pull/backup-2026-10-17/` (gitignored). `automation_1.py` (base_watch) written.
+- Result, from `logs/all.log` (UTC 22:37:57): `scanner_1.py` stopped: `ModuleNotFoundError: No module named 'grid'`. The file `lib/grid.py` exists and matches the repo. Cause not yet known. Possible: the game loads Libraries only at start, so a restart or a Run Script is needed. Next step: restart the game or run `scanner_1` by hand. If `grid` still fails, Library imports do not work at runtime in this build; then inline `grid` into `scanner_1` and `harvester_1` (ADR-025 rollback).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 22:37Z | fe9a45c | FAIL | scanner_1 `No module named 'grid'`. Pending restart test. |
