@@ -61,9 +61,10 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 - Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
 - Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
-- Run: Run Script in Game on `o2gen_1`.
-- Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>` (info), one pass per world minute. Console `dumped waste at <w>, penalty <p>` when waste reaches 50. Efficiency near 100% once waste is clean.
-- Pass: intake tracks CO2/10. Each dump happens at 50-60 with penalty 0.0. Waste never reaches 100. Stopping the script sets intake to 0.
+- Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
+- Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
+- Warning `waste <w> is above 60; not dumping (penalty)` means the window was missed. Paste it with the waste value.
+- Pass: intake tracks CO2/10 exactly. Each dump happens at 50-60 with penalty 0.0. No `above 60` warning. Waste never reaches 100. Stopping the script sets intake to 0.
 - Fail signs: `warning: set_intake ...` or `warning: dump ...` in the console; a penalty above 0 after a dump in the 50-60 window (paste the status line).
 
 | Date | Game version | Result | Notes |

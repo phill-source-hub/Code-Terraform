@@ -1,61 +1,64 @@
-"""Oxygen generator controller: CO2 intake at peak, waste dumped before it costs efficiency.
+"""Oxygen generator controller: peak efficiency, waste dumped only inside 50-60, no penalty.
 
 Where it runs: machine script slot `o2gen_1` (self = this generator). Mk I.
 Self-contained on purpose (ADR-014): no imports.
 Rules (manual, Oxygen Generator and Atmosphere):
-    peak intake is CO2 / 10 (ppt); waste is clean up to 60, falls off from 60, stalls at 100;
-    dumping between 50 and 60 is penalty-free; intake returns to 0 when this script stops.
-Policy, each pass:
-    1. set intake to CO2 / 10 from get_component("atmosphere").get_co2();
-    2. dump as soon as waste reaches DUMP_FROM (50), so the dump lands in the clean window.
-       If waste has already passed 60, dump anyway: a penalty is better than the stall at 100.
-Pacing: one pass per 1/60 world-clock hour, the same as the solar tracker.
-Failure: a missing atmosphere or a rejected call is shown as a warning or error. The loop goes on.
-API facts relied on (docs/game/power.md is the solar pattern; oxygen rules from the manual):
-    self.set_intake(value), self.waste(), self.dump_waste() (.status, .penalty),
-    self.dump_penalty(), self.efficiency(), get_component("atmosphere").get_co2(),
-    get_component("clock").real_seconds_per_hour(), set_status, print, sleep.
+    peak intake is exactly CO2 / 10 (ppt); efficiency is 100% at peak with waste at or below 60;
+    dumping between 50 and 60 is penalty-free; dumping outside it applies a penalty.
+Policy, every pass, with no sleep (the game yields during loops, so the loop runs continually):
+    1. set intake to CO2 / 10 from get_component("atmosphere").get_co2(), unrounded;
+    2. if waste is between 50 and 60, dump. Outside that window, never dump: the penalty is not
+       accepted. A waste level above 60 is shown as a warning until the owner decides what to do.
+    3. if a dump reports a penalty, or the penalty is not zero, show a warning.
+Status and console lines change only when their content changes, so the log stays readable.
+Failure: a missing atmosphere is an error status; a rejected call is a warning. The loop goes on.
+API facts relied on (manual, Oxygen Generator and Atmosphere): self.set_intake(value),
+    self.waste(), self.dump_waste() (.status, .penalty), self.dump_penalty(), self.efficiency(),
+    get_component("atmosphere").get_co2(); set_status, print.
 """
 
-DUMP_FROM = 50
-PASSES_PER_WORLD_HOUR = 60
+DUMP_LOW = 50
+DUMP_HIGH = 60
 
 atmosphere = get_component("atmosphere")
-clock = get_component("clock")
-period = 60.0
-if clock is not None:
-    period = clock.real_seconds_per_hour() / PASSES_PER_WORLD_HOUR
+last_status = None
+above_warned = False
 
 while True:
     if atmosphere is None:
         set_status("atmosphere not found", "error")
-        sleep(period)
         continue
 
-    co2 = atmosphere.get_co2()
-    intake = co2 / 10
+    intake = atmosphere.get_co2() / 10
     setting = self.set_intake(intake)
     if setting.status != "ok":
         print("warning: set_intake " + setting.status)
 
     waste = self.waste()
-    if waste >= DUMP_FROM:
+    if DUMP_LOW <= waste <= DUMP_HIGH:
         dumped = self.dump_waste()
         if dumped.status == "ok":
             print("dumped waste at " + str(round(waste, 1)) + ", penalty " + str(dumped.penalty))
+            if dumped.penalty != 0:
+                print("warning: dump at " + str(round(waste, 1)) + " reported a penalty")
         else:
             print("warning: dump " + dumped.status)
+    elif waste > DUMP_HIGH and not above_warned:
+        print("warning: waste " + str(round(waste, 1)) + " is above 60; not dumping (penalty)")
+        above_warned = True
+    if waste <= DUMP_HIGH:
+        above_warned = False
 
-    set_status(
+    status = (
         "intake "
-        + str(round(intake, 1))
+        + str(round(intake, 2))
         + " waste "
         + str(round(waste, 1))
         + " eff "
         + str(round(self.efficiency(), 1))
-        + "%"
-        + " penalty "
-        + str(self.dump_penalty()),
-        "info",
+        + "% penalty "
+        + str(self.dump_penalty())
     )
-    sleep(period)
+    if status != last_status:
+        set_status(status, "info")
+        last_status = status
