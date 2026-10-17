@@ -15,12 +15,13 @@
 | `fabricator.md` | fabricator, sample recipes, item ports, transfer results, ItemStack |
 | `drone.md` | drones, fleet, drone service station, weather collection |
 | `contracts.md` | contracts, transmitter, contract statuses, shop and commander calls |
+| `contracts-terminal-breach.md` | Alien Terminal Breach (`terminal_breach`): guess feedback, code length, answer format |
 
 ## Not yet extracted
 
 Add a file when a script needs it:
 
-- Contract subtypes (15): per-contract APIs such as `LatticeGrid`, `Vault`.
+- Contract subtypes (14 left): per-contract APIs such as `LatticeGrid`, `Vault`.
 - Numbers, strings and f-strings, lists, dicts, tuples, match/case, functions, generators, caching.
 - Classes, dataclasses, enums, decorators, `@property`, operators in detail.
 - Stdlib modules: `random`, `functools`, `re`, `dataclasses`, `enum`, `json`, `heapq`, `traceback`, `math`, `itertools`, `operator`, `string`, `collections`.
