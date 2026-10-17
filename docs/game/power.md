@@ -109,7 +109,15 @@ Notes:
 - Charging: park in a Vehicle Charging Station service area. `self.charge(vehicle_id, 0.8)` charges to 80%, queued per station. `dispatch_rescue(vehicle, target_level)` sends a slow field drone to a stranded rover or Pioneer. `cancel_rescue()` recalls the drone; delivered charge stays.
 - Battery swap: Pioneer parked and braked in charger service area calls `self.swap_batteries("battery_charger_1", None, 0.9)`. `None` = all installed; `0.9` = minimum charge of replacements. All-or-nothing: each replacement needs an unqueued cell of the same type at or above threshold, else nothing changes.
 
-## Open questions (not in these pages)
+## Rescue, swap and charge: status strings (manual, build fe9a45c)
 
-- Exact `status` strings for `dispatch_rescue`, `cancel_rescue`, `swap_batteries`: check their own DOCS entries in `docs/game/manual/`.
-- Whether `charge(slot_index, target_level)` in docs matches the stub signature exactly: confirm in game.
+Source: manual pages Vehicle Charging Station (`.dispatch_rescue`, `.cancel_rescue`), Battery Charger (`.charge`), Pioneer (`.swap_batteries`) and BatterySwapResult. Tag: **VERIFIED (docs)**.
+
+- `dispatch_rescue(vehicle_name, target_level=1.0)` (Vehicle Charging Station, self only) returns `ActionResult`. Statuses: `ok`; `already_dispatched` (rejection: this station has a rescue, or the target is already assigned); `station_offline` (transient); `not_found` (rejection); `invalid` (rejection: target level outside 0-1 or bad argument). Only one rescue at a time: guard with `if not self.is_rescuing():`.
+- `cancel_rescue()` returns `ActionResult`. Statuses: `ok`; `not_found`. The target is released at once and keeps delivered charge.
+- `swap_batteries(charger, slots=None, min_level=1.0)` (Pioneer, self only) returns `BatterySwapResult`. Statuses: `ok`; `no_op` (success, nothing changed); `not_found`; `under_construction`; `busy` (transient); `not_at_service_point`; `invalid_slots`; `no_compatible_battery`; `insufficient_charged_batteries` (listed on the result type, not in the method's outcome table). All-or-nothing. Payload: `.swapped_count`.
+- `charge(slot_index, target_level=1.0)` (Battery Charger, self only) returns `ActionResult`. Statuses: `queued` (success); `target_reached` (success); `empty` (rejection: no battery in the socket); `under_construction` (rejection). Repeating the call updates the target without reordering.
+
+## Open questions
+
+- Whether the game's stub signature for `charge(slot_index, target_level)` matches the manual: the manual gives the same parameter names and defaults. Confirm in game with a probe or a run; the stub is the only in-game check.
