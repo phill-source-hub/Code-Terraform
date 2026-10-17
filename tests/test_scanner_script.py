@@ -20,16 +20,29 @@ class StopOnSleep(FakeGame):
         raise _Stop
 
 
-def _notebook(saves: list):
+def _notebook(saves: list, stored: dict | None = None):
+    values = dict(stored or {})
+
+    def get_value(key, default=None):
+        return values.get(key, default)
+
     def set_value(key, value):
         # The Data Archive stores a copy and requires JSON-safe values (manual: Value rules).
-        saves.append((key, json.loads(json.dumps(value))))
+        copied = json.loads(json.dumps(value))
+        saves.append((key, copied))
+        values[key] = copied
         return SimpleNamespace(status="ok", message="")
 
-    return FakeComponent(id="notebook", type_id="notebook", methods={"set": set_value})
+    return FakeComponent(
+        id="notebook", type_id="notebook", methods={"get": get_value, "set": set_value}
+    )
 
 
-def run_grid(results=None, notebook=True, seconds=3600.0, source_override=None):
+def _map_saved(saves):
+    return [value for key, value in saves if key == "scanner.map"][-1]
+
+
+def run_grid(results=None, notebook=True, seconds=3600.0, source_override=None, stored=None):
     """Run one full pass of the scanner. Returns (scans, saves, game)."""
     results = results or {}
     scans: list[str] = []
@@ -39,7 +52,7 @@ def run_grid(results=None, notebook=True, seconds=3600.0, source_override=None):
         id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: seconds}
     )
     if notebook:
-        game.components["notebook"] = _notebook(saves)
+        game.components["notebook"] = _notebook(saves, stored)
 
     def scan(name):
         scans.append(name)
@@ -68,18 +81,33 @@ def test_every_sector_is_scanned_exactly_once_in_one_pass():
     assert len(set(scans)) == 192
 
 
-def test_map_is_saved_at_the_end_of_each_row():
+def test_map_is_saved_once_per_complete_pass_not_per_row():
     _, saves, _ = run_grid()
-    assert len(saves) == 8
-    assert all(key == "scanner.map" for key, _ in saves)
-    assert len(saves[0][1]) == 24
-    assert len(saves[-1][1]) == 192
+    map_saves = [value for key, value in saves if key == "scanner.map"]
+    assert len(map_saves) == 1
+    assert len(map_saves[0]) == 192
+
+
+def test_map_is_saved_before_the_pass_counter():
+    # A harvester that sees the new pass number must find the map for it already written.
+    _, saves, _ = run_grid()
+    assert [key for key, _ in saves] == ["scanner.map", "scanner.pass"]
+
+
+def test_pass_counter_continues_from_the_stored_value():
+    _, saves, _ = run_grid(stored={"scanner.pass": 4})
+    assert ("scanner.pass", 5) in saves
+
+
+def test_a_missing_or_bad_pass_counter_starts_at_one():
+    _, saves, _ = run_grid(stored={"scanner.pass": "four"})
+    assert ("scanner.pass", 1) in saves
 
 
 def test_map_entries_hold_status_name_and_value():
     results = {"E13": SimpleNamespace(status="ok", message="", name="Soil Sample", value=50)}
     _, saves, _ = run_grid(results=results)
-    final = saves[-1][1]
+    final = _map_saved(saves)
     assert final["E13"] == {"status": "ok", "name": "Soil Sample", "value": 50}
     assert final["A1"] == {"status": "empty", "name": None, "value": None}
 
@@ -112,7 +140,10 @@ def test_failed_save_is_a_warning_not_a_stop():
     game.components["notebook"] = FakeComponent(
         id="notebook",
         type_id="notebook",
-        methods={"set": lambda key, value: SimpleNamespace(status="invalid_key", message="bad")},
+        methods={
+            "get": lambda key, default=None: default,
+            "set": lambda key, value: SimpleNamespace(status="invalid_key", message="bad"),
+        },
     )
     scans: list[str] = []
     owner = SimpleNamespace(
@@ -129,6 +160,77 @@ def test_failed_save_is_a_warning_not_a_stop():
         )
     assert ("map save invalid_key: bad", "warn") in game.statuses
     assert len(scans) == 192
+
+
+def test_a_failed_map_save_does_not_advance_the_pass_counter():
+    # The counter would tell the harvester to reset its log for a map that never arrived.
+    attempts: list = []
+
+    def refuse(key, value):
+        attempts.append(key)
+        return SimpleNamespace(status="invalid_key", message="bad")
+
+    game = StopOnSleep()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
+    )
+    game.components["notebook"] = FakeComponent(
+        id="notebook",
+        type_id="notebook",
+        methods={"get": lambda key, default=None: default, "set": refuse},
+    )
+    owner = SimpleNamespace(
+        scan=lambda name: SimpleNamespace(status="empty", message="", name=None, value=None)
+    )
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
+    assert attempts == ["scanner.map"]
+
+
+def test_the_archive_is_looked_up_again_each_pass():
+    # Pass 1 finds no Data Archive; it unlocks before pass 2, which must then save its map.
+    saves: list = []
+    archive = _notebook(saves)
+
+    class ArchiveUnlocksAfterPassOne(FakeGame):
+        def __init__(self):
+            super().__init__()
+            self.archive_lookups = 0
+            self.sleeps = 0
+
+        def get_component(self, name, /):
+            if name == "notebook":
+                self.archive_lookups += 1
+                return None if self.archive_lookups == 1 else archive
+            return super().get_component(name)
+
+        def sleep(self, seconds, /):
+            super().sleep(seconds)
+            self.sleeps += 1
+            if self.sleeps == 2:
+                raise _Stop
+
+    game = ArchiveUnlocksAfterPassOne()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
+    )
+    owner = SimpleNamespace(
+        scan=lambda name: SimpleNamespace(status="empty", message="", name=None, value=None)
+    )
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
+    assert [key for key, _ in saves] == ["scanner.map", "scanner.pass"]
+    assert ("scanner.pass", 1) in saves
 
 
 def test_repeats_after_one_world_hour():

@@ -5,7 +5,7 @@ Items deferred on purpose. Each one names the trigger that makes it active.
 ## B-001: Save the scanner map to the Data Archive
 
 - Trigger: Data Archive research unlocked in game (`get_component("notebook")` stops returning `None`). Research costs Terraform Index 70,000 (manual, Research page); Ship Computer (10,000) does not add it.
-- Status: code already in place. `scripts/main/scanner_1.py` calls `notebook.set("scanner.map", ...)` at the end of each row. Until unlock, the save is skipped and the scan still runs.
+- Status: code on `feat/data-archive-persistence`. `scripts/main/scanner_1.py` saves `scanner.map` once per complete pass, then `scanner.pass` (ADR-026). Until unlock, the save is skipped and the scan still runs. Step 3 (harvester reads the map on reload) is not written yet.
 - To do when unlocked:
   1. Run `scanner_1` through one full pass. Confirm `scanner.map` appears in Computer > Data Archive with 192 entries.
   2. Confirm a `set` status is `ok`. Any other status shows as a `map save ...` warning in the status bar.
@@ -29,6 +29,5 @@ Items deferred on purpose. Each one names the trigger that makes it active.
 ## B-004: Harvester `done` list is never cleared
 
 - Trigger: confirm in game whether scanned sectors refill (the manual does not say; see `docs/game/harvester.md`).
-- Status: open. Possible bug.
-- Problem: `harvester_1.py` adds each collected or empty sector to `done` and never removes it. If sectors refill or the map is re-saved, the harvester ignores them for the rest of the run.
-- Fix options: clear `done` when the scanner map is re-saved, or key it by the save time.
+- Status: fixed on `feat/data-archive-persistence` (ADR-026). The visited log is `harvester.done` = {pass, sectors}, cleared when `scanner.pass` changes. It is also saved, so a reload resumes. Game check pending (needs Data Archive research).
+- Problem (was): `harvester_1.py` added each collected or empty sector to `done` and never removed it. If sectors refilled or the map was re-saved, the harvester ignored them for the rest of the run.

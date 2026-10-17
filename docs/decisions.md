@@ -158,3 +158,12 @@ Short, newest last. Format: date, decision, why.
 - Why: Shared Library is researched, so the blocker in ADR-013 and ADR-014 is gone. A copy with a parity test is a second source that can drift, and the test only checks the copy, not the game's import.
 - Supersedes: ADR-013 and ADR-014 (import rule). ADR-016 is superseded for `power_status` when the parked monitor is replaced (see backlog).
 - Status: repo side done. The game-side import is UNVERIFIED until the in-game checklist (Library imports, `docs/in-game-test-log.md`) passes after the owner's sync go-ahead.
+
+## ADR-026: Scanner saves the map once per pass; harvester's visited log lives in the Data Archive
+
+- Date: 2026-10-17
+- Decision: scanner_1 saves `scanner.map` once, after a complete snake pass, then saves `scanner.pass` (a counter). The per-row saves of ADR-021 are dropped. The harvester keeps its visited log as `harvester.done` = {pass, sectors}, saves it after every change, and starts it again when `scanner.pass` changes. Both scripts look up `notebook` each pass, so an unlock mid-run is picked up.
+- Why: a per-row save leaves a half-written map in the archive; after a reload the harvester would plan from it as if it were complete. A pass counter lets the harvester tell a new map from the old one, which closes B-004. Saving the log lets a reload resume instead of re-visiting.
+- Supersedes: the per-row save part of ADR-021. ADR-021's once-per-pass scan and archive target stay.
+- Trade-off: a stop part-way through a pass keeps the previous complete map instead of the partial one. The harvester plans from a complete (if older) map, not a partial one.
+- Status: repo side done. Needs Data Archive research to run; without it the log is kept only for this run. In-game check in `docs/in-game-test-log.md`.
