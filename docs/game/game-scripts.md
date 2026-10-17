@@ -37,9 +37,9 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 - `*.pyi` stubs (`__builtins__.pyi`, `builtins.pyi`, module stubs). Regenerated per game build.
 - `user_stubs.py`, `pyrightconfig*.json`, `CODE-TERRAFORM-IDE.txt`, `codeterraform-*.json`, `.gitignore`, `.vscode/`, `.zed/`, `logs/`, `typeshed-LICENSE.txt`.
 
-## Owner-written, not tracked (inventory only)
+## Owner-written, tracked as copies (`scripts/owner/`, not synced)
 
-These are the owner's own experiments. They are not in the repo. Asking before copying them: the repo is public (ADR-023 reasoning).
+Copies made by the owner's own hand, committed on the owner's request. Byte-identical to the game files on 2026-10-17. Not synced: the repo does not own them.
 
 - `oxygen_sensor.py`: reads the oxygen sensor and calls `calibrate`. Named in the `/=` syntax note in `docs/api-notes.md`.
 - `pressure_sensor.py`: reads the pressure sensor and calls `stabilize`.
