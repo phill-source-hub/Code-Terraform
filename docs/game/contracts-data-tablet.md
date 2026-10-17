@@ -21,6 +21,6 @@ Source: owner-supplied briefing text for this contract (build `fe9a45c`). Tag: *
 
 ## Open questions
 
-- Whether `rows` and `cols` are properties (as used) or methods: check in game.
-- Whether a probe on a message cell returns that cell's own character: check in game.
-- Probe cost or time budget per call: not in the briefing.
+- Resolved by X-003 PASS (2026-10-17): `rows` and `cols` are properties.
+- Resolved by X-003 PASS: the message came out right from distance-0 probe cells.
+- Probe cost or time budget per call: not in the briefing and not observed as a limit.

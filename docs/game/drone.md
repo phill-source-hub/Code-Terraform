@@ -111,6 +111,6 @@ Access: `get_component(id)`.
 
 ## Open questions
 
-- Depot API (`load`/`unload` on Depot, `Drone Depot` section at manual line ~19869): not yet extracted.
+- Depot API (`load`/`unload` on Depot, `Drone Depot` section in the manual).
 - `dispatch_rescue` on Drone Service Station versus Vehicle Charging Station (`dispatch_rescue` for vehicles): two APIs, same name. Check each entry in game.
 - Numeric status for heli `"stalled_no_oil"` thresholds: not stated.

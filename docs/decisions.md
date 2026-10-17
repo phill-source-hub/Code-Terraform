@@ -59,7 +59,7 @@ Short, newest last. Format: date, decision, why.
 ## ADR-010: Game reference is our own short extracts, not a copy of the manual
 
 - Date: 2026-10-17
-- Decision: facts from the owner's in-game DOCS manual go into `docs/game/*.md` as short tables and notes, tagged VERIFIED (docs) with the build id. The full manual is not copied into the repo. Sections not yet needed stay listed as "not yet extracted".
+- Decision: facts from the owner's in-game DOCS manual go into `docs/game/*.md` as short tables and notes, tagged VERIFIED (docs) with the build id. The full manual is not committed to the repo; ADR-023 keeps a git-ignored local copy. Sections not yet needed stay listed as "not yet extracted".
 - Why: the manual is about 1.7 MB and is the owner's material. Our notes stay small, and each fact can be traced to a section of the manual.
 
 ## ADR-011: Game-folder writes wait for the owner's tutorial
@@ -67,6 +67,7 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: no writes to the game folder (scripts, sync apply) until the owner says the in-game tutorial is complete. Read-only status checks are allowed.
 - Why: the owner is partway through a fresh game. Our scripts would change tutorial state and could break the owner's own experiments.
+- Status: lifted 2026-10-17. The owner confirmed the in-game tutorial is complete. `tools/sync_to_game.py apply` may run, with the owner's go-ahead for each run.
 
 ## ADR-012: Owner-requested edits use a "Help me" marker; pulls go to review
 
@@ -79,6 +80,14 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `scripts/contracts/relay_hack.py` has no imports. It carries a copy of the solver from `scripts/libs/relay_hack.py`. Tests check the copy gives the right code on the same inputs.
 - Why: the game raised `RuntimeError: Shared Library not yet researched` on any import from `lib/`. Contract scripts cannot wait for that research. Revisit when Shared Library is unlocked and move contract scripts back to imports.
+- Status: Shared Library researched 2026-10-17. Imports from `lib/` are allowed now; migration tracked in backlog B-002.
+
+## ADR-014: Machine scripts are self-contained too (extends ADR-013)
+
+- Date: 2026-10-17
+- Decision: `solar_1.py` carries its own copy of the tilt search and imports nothing. The power monitor (`harvester_1.py`) imports `lib/power_status` and must get the same treatment before its L3 run.
+- Why: any `lib/` import needs Shared Library research, which the save lacks. The first machine script that imports from `lib/` will fail the same way the relay contract did.
+- Status: the blocker is gone (Shared Library researched 2026-10-17). See backlog B-002 for the copies to replace.
 
 ## ADR-015: Biology scripts are self-contained; one sample per specimen
 
@@ -86,17 +95,12 @@ Short, newest last. Format: date, decision, why.
 - Decision: each Bio script imports nothing (ADR-014). The Lab discards a specimen after a successful extract, treating each specimen as one sample. This is an assumption; the manual does not say a specimen is used up.
 - Why: lib imports are blocked until Shared Library research. Discarding after extract frees the chamber, so the collector can refill it. Keeping the specimen would extract repeatedly and spend reagents with no stop condition.
 
-## ADR-014: Machine scripts are self-contained too (extends ADR-013)
-
-- Date: 2026-10-17
-- Decision: `solar_1.py` carries its own copy of the tilt search and imports nothing. The power monitor (`harvester_1.py`) imports `lib/power_status` and must get the same treatment before its L3 run.
-- Why: any `lib/` import needs Shared Library research, which the save lacks. The first machine script that imports from `lib/` will fail the same way the relay contract did.
-
 ## ADR-016: Power monitor is self-contained like the other machine scripts
 
 - Date: 2026-10-17
 - Decision: `harvester_1.py` carries a copy of the `power_status` rules and imports nothing. `scripts/libs/power_status.py` remains the tested source. Parity tests compare the copy's messages with the library's.
 - Why: its import from `lib/` would fail without Shared Library research, the same blocker that stopped the relay contract.
+- Status: the blocker is gone (Shared Library researched 2026-10-17). The parked script re-imports when it returns (backlog B-002).
 
 ## ADR-017: Harvester owns its slot; power monitor is parked
 
@@ -126,10 +130,16 @@ Short, newest last. Format: date, decision, why.
 
 - Date: 2026-10-17
 - Decision: `scanner_1.py` runs a snake pass over all 192 sectors from base, saves the results to the Data Archive as `scanner.map` (status, name, value per sector) at the end of each row, and repeats each world hour. The scanner does not move, so the scan costs no harvester heat.
-- Why: the scanner's self.scan is a base-side action (manual: scanner_1). A full map lets the harvester plan routes by heat and battery, which a nearest-first scan cannot do. ADR-020 is superseded.
+- Why: the scanner's self.scan is a base-side action (manual: scanner_1). A full map lets the harvester plan routes by heat, which a nearest-first scan cannot do. ADR-020 is superseded.
 
 ## ADR-022: Harvester plans trips by heat, not distance
 
 - Date: 2026-10-17
 - Decision: `harvester_1.py` runs a shortest-path search over the 8x24 grid each pass. Entering an item sector costs 1 heat, anything else 7. Items are ranked by (path heat, steps). A trip is taken only if heat stays under HOT_HEAT. Otherwise the harvester cools first. There is no battery model: the owner confirmed the harvester has no battery.
 - Why: heat is the only harvester budget in the manual, and the scanner map gives the item locations. Ranking by heat avoids empty cells where a detour through items is possible.
+
+## ADR-023: Owner's full DOCS manual is a local, git-ignored copy
+
+- Date: 2026-10-17
+- Decision: the full manual (build fe9a45c, about 41,000 lines) is split by section into `docs/game/manual/` (421 files plus an index). The folder is git-ignored and never committed. Our short extracts in `docs/game/*.md` stay committed. This narrows ADR-010 for lookup: the full text is kept locally.
+- Why: the owner asked for the full manual to be in the repo for lookup. The repo is public on GitHub and the manual is the owner's game material, so committing it would publish it. Ignoring it keeps it local. The owner can reverse this by removing the ignore line.

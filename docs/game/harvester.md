@@ -12,7 +12,7 @@ Source: owner-supplied in-game DOCS text for `scanner_1` and `harvester_1` (buil
 
 ## Harvester (`harvester_1`)
 
-- Collects surface items. The harvester has its own in-built battery, separate from the base battery. It has no power logic.
+- Collects surface items. Heat is its only budget. The manual gives no battery for the Harvester (grep of the manual, 2026-10-17). Its onboard water tank is for planting only.
 - `self.move(sector)`: one cardinal cell per call. Statuses: `ok`, `invalid`, `too_far`, `already_here`, `overheated`, `moving`, `busy`.
 - `self.collect()`: returns ScanResult. Statuses: `ok` (item payload), `empty`, `holding`, `overheated`, `moving`, `collecting`, `busy`.
 - Collected items go to the harvester's single **held slot**, not Inventory. `self.store()` moves the held item to Inventory from any sector: returns ItemResult with `.item_id` after `ok`.

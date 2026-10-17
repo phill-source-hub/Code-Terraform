@@ -4,6 +4,7 @@ Source: in-game DOCS manual, build `fe9a45c`. Sections: "Imports & Libraries", "
 
 ## Research gate
 
+- Status: Shared Library is researched (owner, 2026-10-17).
 - Library scripts unlock with **Shared Library** research. Unlock path: Ship Computer, then Shared Library.
 - Built-in modules and typing support do not need that research.
 
@@ -81,5 +82,5 @@ print(temp())
 
 ## Repo mapping (ours)
 
-- `scripts/libs/*.py` is the source. It is copied to the game's `lib/` by the sync step (pending owner approval).
+- `scripts/libs/*.py` is the source. It is copied to the game's `lib/` by `tools/sync_to_game.py` (`apply` needs the owner's go-ahead).
 - Tests import the same file through the fake game harness. A Library must not use `self` or `panel`.

@@ -111,5 +111,5 @@ Notes:
 
 ## Open questions (not in these pages)
 
-- Exact `status` strings for `dispatch_rescue`, `cancel_rescue`, `swap_batteries`: check their own DOCS entries; not yet extracted.
+- Exact `status` strings for `dispatch_rescue`, `cancel_rescue`, `swap_batteries`: check their own DOCS entries in `docs/game/manual/`.
 - Whether `charge(slot_index, target_level)` in docs matches the stub signature exactly: confirm in game.
