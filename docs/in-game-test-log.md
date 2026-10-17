@@ -55,6 +55,24 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
 
+## Atmosphere
+
+### O-001: Oxygen generator (`o2gen_1`, Mk I)
+
+- Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
+- Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
+- Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
+- Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
+- Warning `waste <w> is above 60; not dumping until 90` means the window was missed. Waste between 60 and 90 waits.
+- At 90 or above the script takes a last-resort dump: `LAST RESORT dump at <w>, penalty <p>`. Paste it. A non-zero penalty is expected only here.
+- Pass: intake tracks CO2/10 exactly. Each dump happens at 50-60 with penalty 0.0. No `above 60` warning. Waste never reaches 100. Stopping the script sets intake to 0.
+- Fail signs: `warning: set_intake ...` or `warning: dump ...` in the console; a penalty above 0 after a dump in the 50-60 window (paste the status line).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 (log 18:59 UTC) | fe9a45c | PARTIAL PASS | Log: `dumped waste at 50, penalty 0` twice (18:57, 18:59 UTC). No warnings or errors. Intake and efficiency not yet checked. |
+| 2026-10-17 (panel) | fe9a45c | PASS | Intake 5000 ppt (status 4999.99) against CO2 about 50,000 ppt: CO2/10. Efficiency 100%, penalty 0, output 0.240 ppt/day (Mk I peak). Waste 34.4 and rising toward the next clean dump at 50. |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)

@@ -58,6 +58,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | Name | Purpose | Where it runs | Status |
 |------|---------|---------------|--------|
 | power_monitor (`harvester_1.py`) | warn on power deficit or low battery; read-only | machine `harvester_1` (placed on a free slot, not a harvester job) | L1+L2 pass, L3 pending |
+| o2gen_1 | Set intake to CO2/10, dump waste at 50 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | solar_tracker (`solar_1.py`) | Tilt = 90 - sun elevation, self-contained | machine `solar_1` (Solar Generator) | L1+L2 pass, L3 pending |
 | relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
