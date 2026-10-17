@@ -71,6 +71,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 (log 18:59 UTC) | fe9a45c | PARTIAL PASS | Log: `dumped waste at 50, penalty 0` twice (18:57, 18:59 UTC). No warnings or errors. Intake and efficiency not yet checked. |
+| 2026-10-17 (panel) | fe9a45c | PASS | Intake 5000 ppt (status 4999.99) against CO2 about 50,000 ppt: CO2/10. Efficiency 100%, penalty 0, output 0.240 ppt/day (Mk I peak). Waste 34.4 and rising toward the next clean dump at 50. |
 
 ## Contracts
 
