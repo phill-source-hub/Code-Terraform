@@ -221,6 +221,19 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 | fe9a45c | PASS | Owner reports contract complete. Log: `script contract_terminal_breach: completed`. |
+### X-003: Underground Data Tablet (`data_tablet`)
+
+- Script: `scripts/contracts/data_tablet.py`, synced to the game root as `data_tablet.py`.
+- Briefing (owner-supplied): 30x30 tablet, probe distance 0 marks message cells. Transmit the distance-0 characters, row-major.
+- Method: probes all 900 cells once, row-major, and builds the message in one pass.
+- Expected console: `<N> chars sent: correct <message>`.
+- Pass criteria: transmit status `correct`. Contract status `completed`.
+- Failure lines: `data_tablet failed: ...` means nothing was sent. Paste that line.
+- Check in game: `rows` and `cols` are properties; probe on a message cell returns its own char (see `docs/game/contracts-data-tablet.md`).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 | fe9a45c | PASS | Owner reports contract complete. Log: `script contract_data_tablet: completed`. |
 
 ## Scripts
 
