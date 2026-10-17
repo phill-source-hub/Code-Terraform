@@ -328,3 +328,9 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | — | fe9a45c | PENDING | `automation_1` (`base_watch`, `power_status`): not yet checked in log. |
 
 | 2026-10-17 23:02Z | fe9a45c | PASS (imports) | `automation_1` (base_watch) prints `base ok`, no errors. `base_watch` and `power_status` imports work. Heartbeat path NOT yet confirmed: `base ok` also shows when Signal Bus (`comms`) is not researched, which skips heartbeat checks. Recheck after Signal Bus research. |
+
+## Heartbeat fix (ADR-031), 2026-10-17 night
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 23:08Z+ | fe9a45c | PASS (owner) | `pacing` Library present; `scanner_1` restarted on the new code; `harvester_1` and `automation_1` updated. Owner reports base alerts clear. Remaining alert was `power deficit` at night: solar output is zero, so the deficit is expected, not a fault. |
