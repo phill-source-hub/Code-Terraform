@@ -87,6 +87,84 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 |      | fe9a45c      |        |       |
 
+## Atmosphere
+
+### O-001: Oxygen generator (`o2gen_1`, Mk I)
+
+- Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
+- Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
+- Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
+- Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
+- Warning `waste <w> is above 60; not dumping until 90` means the window was missed. Waste between 60 and 90 waits.
+- At 90 or above the script takes a last-resort dump: `LAST RESORT dump at <w>, penalty <p>`. Paste it. A non-zero penalty is expected only here.
+- Pass: intake tracks CO2/10 exactly. Each dump happens at 50-60 with penalty 0.0. No `above 60` warning. Waste never reaches 100. Stopping the script sets intake to 0.
+- Fail signs: `warning: set_intake ...` or `warning: dump ...` in the console; a penalty above 0 after a dump in the 50-60 window (paste the status line).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 (log 18:59 UTC) | fe9a45c | PARTIAL PASS | Log: `dumped waste at 50, penalty 0` twice (18:57, 18:59 UTC). No warnings or errors. Intake and efficiency not yet checked. |
+| 2026-10-17 (panel) | fe9a45c | PASS | Intake 5000 ppt (status 4999.99) against CO2 about 50,000 ppt: CO2/10. Efficiency 100%, penalty 0, output 0.240 ppt/day (Mk I peak). Waste 34.4 and rising toward the next clean dump at 50. |
+
+## Atmosphere (pressure)
+
+### PG-001: Pressure generators (`pressure_1`, `pressure_2`, Mk I)
+
+- Scripts: `scripts/main/pressure_1.py` and `pressure_2.py` (same program; test keeps them identical). Applied 2026-10-17, replacing the `Help me` requests.
+- Setup: both powered (-7 W each). Script running on each.
+- Run: Run Script in Game on each generator. The loop runs continually.
+- Expected: status `gauge <g> window <low>-<high> efficiency <e>%`, updated when it changes. Efficiency climbs toward 100% after several sweeps. Console `warning: sync <status>` only if a sync is refused.
+- Pass: efficiency rises and holds near 100%. Each sweep gets one sync inside its window. No refused syncs.
+- Fail signs: efficiency stuck at 0% across sweeps, or falling. Paste the status line with the window values.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+## Biology (Bio Collector, Bio Lab, Bio Exchange)
+
+Prerequisites before any run: each machine powered; Auto Feeders researched (scripted transfers); reagents bought from the Shop Biology category and in home Inventory; Lab and Exchange at Nocturna Base.
+
+### B-001: Bio Collector (`bio_collector_1`)
+
+- Script: `scripts/main/bio_collector_1.py` (applied 2026-10-17, replacing the `Help me` request).
+- Setup: collector powered; Bio Lab at the same outpost; some fragments not yet cataloged.
+- Run: Run Script in Game on `bio_collector_1`.
+- Expected: status `collecting <distance> away` (info). Then a specimen in the collector cargo. Cargo is not collected again until the Lab takes it.
+- Pass: exactly one collect per specimen; no `cargo_occupied` error; nearest uncataloged fragment is chosen first.
+- Fail signs: `collect cargo_occupied` or `collect busy` repeating (paste the status).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### B-002: Bio Lab (`bio_lab_1`)
+
+- Script: `scripts/main/bio_lab_1.py`.
+- Setup: B-001 passed (specimen in collector cargo). Reagents for the specimen's recipe in home Inventory. Auto Feeders researched.
+- Run: Run Script in Game on `bio_lab_1`.
+- Expected status sequence: `sample shipped` (info) once per specimen. Before that, possibly `stock <reagent>: <status>` if reagents are missing (warn, paste it).
+- Pass: the chamber takes the specimen, analyzes it, loads reagents from Inventory, extracts one sample, the sample reaches Inventory, and the chamber is empty again.
+- 2026-10-17 (owner report): samples stuck in the output port. Scripted `send` needs Auto Feeders, so the port could not drain and extraction kept going. Fixed: the lab ships the output first, extracts only when the output is empty, and discards the specimen only after a successful ship. Until Auto Feeders is researched, a refused send is shown as `output not shipped: research_required`, and the specimen is kept.
+- 2026-10-17 (Auto Feeders unlocked): intermittent failures. Log showed no take or reagent messages, because those were status-only. Now every blocked step is printed as `warning: ...`. Load uses the amount the take moved. Any other reagent in the input is ejected before a take, since the port holds one reagent type at a time. `discard` returning `input_empty` is expected and not a warning.
+- ASSUMPTION to check: one sample per specimen. If the lab extracts again from the same specimen before discarding, or the discard fails, note it here.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### B-003: Bio Exchange (`bio_exchange_1`)
+
+- Script: `scripts/main/bio_exchange_1.py`.
+- Setup: B-002 has produced samples in Inventory. Nocturna Base only. At least one Bio Order not complete.
+- Run: Run Script in Game on `bio_exchange_1`.
+- Expected: `waiting for samples` (info) when none match; a delivery per matching sample; `order complete` (info) when the order is filled.
+- Pass: the first open order is assigned; matching samples are taken from Inventory and delivered; the order reaches `complete` and the reward is paid.
+- Fail signs: `take <status>` or `deliver <status>` (warn), paste the status.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)
@@ -129,6 +207,20 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 | fe9a45c | PASS | Owner reports correct. Log: `contract_corrupted_archive: completed`. |
+
+### X-004: Alien Terminal Breach (`terminal_breach`)
+
+- Script: `scripts/contracts/terminal_breach.py`, synced to the game root as `terminal_breach.py`.
+- Briefing (owner-supplied): 15 digits, each 1-5. `guess` returns `.correct` and `.misplaced`.
+- Method: reads only `.correct`. Guess all-`base` once, then change one position at a time. Up to 61 guesses plus one check guess.
+- Expected console: `correct <message>`.
+- Pass criteria: transmit status `correct`. Contract status `completed`.
+- Failure lines: `terminal_breach failed: ...` means nothing was sent. Paste that line.
+- Check in game: `terminal.length` is a property; `.correct` follows the briefing rule with repeated digits (see `docs/game/contracts-terminal-breach.md`).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 | fe9a45c | PASS | Owner reports contract complete. Log: `script contract_terminal_breach: completed`. |
 
 ## Scripts
 

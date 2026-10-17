@@ -60,10 +60,16 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | power_monitor (`harvester_1.py`) | warn on power deficit or low battery; read-only | machine `harvester_1` (placed on a free slot, not a harvester job) | L1+L2 pass, L3 pending |
 | scanner_1 | Sweep the 3x3 around base, print what is there | machine `scanner_1` | L1+L2 pass, L3 pending |
 | harvester_1 | Collect nearest scanned item, store in Inventory | machine `harvester_1` | L1+L2 pass, L3 pending |
+| bio_collector_1 | Explore nearest uncataloged fragment, else one the order needs | machine `bio_collector_1` | L1+L2 pass, L3 pending |
+| bio_lab_1 | Analyze specimen, stage reagents from Inventory, extract, ship sample | machine `bio_lab_1` (home base) | L1+L2 pass, L3 pending |
+| bio_exchange_1 | Fill Bio Order from Inventory samples (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
+| o2gen_1 | Set intake to CO2/10, dump waste at 50 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
+| pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
 | solar_tracker (`solar_1.py`) | Tilt = 90 - sun elevation, self-contained | machine `solar_1` (Solar Generator) | L1+L2 pass, L3 pending |
 | relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
+| terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |
 | probe_thermometer (`scanner_1.py`) | P-001 probe: version, component lookup, thermometer read | machine `scanner_1` (one-off) | L3 pending |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
