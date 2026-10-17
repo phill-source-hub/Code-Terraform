@@ -36,6 +36,9 @@ GAME_BUILTINS = (
     "isinstance",
     "abs",
     "round",
+    "repr",
+    "chr",
+    "ord",
 )
 
 # Built-in exception names listed in the game's DOCS manual (build fe9a45c, Exceptions).

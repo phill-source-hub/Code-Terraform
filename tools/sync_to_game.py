@@ -65,8 +65,13 @@ class Action:
     reason: str = ""
 
 
+def normalize(data: bytes) -> bytes:
+    """Game files use LF. Windows text writes add CR, which is not a content change."""
+    return data.replace(b"\r\n", b"\n")
+
+
 def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    return hashlib.sha256(normalize(data)).hexdigest()
 
 
 def is_protected(target: str) -> bool:
@@ -83,7 +88,7 @@ def collect_repo_files(repo_root: Path) -> dict[str, bytes]:
     files: dict[str, bytes] = {}
     for source, prefix in SOURCE_DIRS.items():
         for path in sorted((repo_root / source).glob("*.py")):
-            files[prefix + path.name] = path.read_bytes()
+            files[prefix + path.name] = normalize(path.read_bytes())
     return files
 
 
@@ -121,7 +126,7 @@ def read_game_files(game_dir: Path, targets: list[str]) -> dict[str, bytes | Non
     result: dict[str, bytes | None] = {}
     for target in targets:
         path = game_dir / target
-        result[target] = path.read_bytes() if path.is_file() else None
+        result[target] = normalize(path.read_bytes()) if path.is_file() else None
     return result
 
 

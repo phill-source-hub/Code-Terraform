@@ -91,3 +91,15 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `harvester_1.py` carries a copy of the `power_status` rules and imports nothing. `scripts/libs/power_status.py` remains the tested source. Parity tests compare the copy's messages with the library's.
 - Why: its import from `lib/` would fail without Shared Library research, the same blocker that stopped the relay contract.
+
+## ADR-017: Harvester owns its slot; power monitor is parked
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` now controls the harvester. The power monitor moves to `scripts/parked/power_monitor.py`, which the sync tool does not copy. It returns once a free machine slot is chosen.
+- Why: the owner asked for the harvester script on this slot. The monitor's tests still run against the parked copy.
+
+## ADR-018: Sync compares line-ending-normalised content
+
+- Date: 2026-10-17
+- Decision: the sync tool normalises CRLF to LF before hashing, comparing and writing. Repo files can have CRLF from Windows text writes. Game files have LF.
+- Why: byte comparison reported false conflicts (game and repo identical except for line endings). Re-based state entries were checked against game bytes before applying.

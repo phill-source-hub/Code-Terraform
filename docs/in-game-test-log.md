@@ -55,6 +55,33 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
 
+## Scanner and harvester
+
+### SC-001: Scanner sweep (`scanner_1`)
+
+- Script: `scripts/main/scanner_1.py` (replaces the P-001 probe, which passed). Self-contained.
+- Setup: scanner powered; a few sectors around E13 have items.
+- Run: Run Script in Game on `scanner_1`.
+- Expected: console lines `<sector>: <name>` for found items and `<sector>: empty` otherwise, in this order: E13, D13, E12, E14, F13. Then `sweep complete` in the status bar. The sweep repeats each world hour.
+- Pass: five sectors scanned in order; no `ValueError`; statuses other than ok or empty appear as warnings.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### HV-001: Harvester collect and store (`harvester_1`)
+
+- Script: `scripts/main/harvester_1.py`. Replaces the power monitor on this slot; the monitor is parked in `scripts/parked/power_monitor.py`.
+- Setup: SC-001 passed (scanned items exist). Harvester at E13. Inventory has room.
+- Run: Run Script in Game on `harvester_1`.
+- Expected: moves one cell per pass toward the nearest item (row first, then column). On arrival: collect, then `stored <item_id> from <sector>` printed. Heat stays under 80; status `cooling` appears above that.
+- Pass: the first item is collected and stored; the harvester moves between items without refusal; no `move too_far` warnings.
+- Assumption to check: start cell E13. If the first move is refused, the harvester is not where we think; paste the status.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)
@@ -100,7 +127,9 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 ## Scripts
 
-### power_monitor (machine `harvester_1`, file `harvester_1.py`)
+### power_monitor (PARKED in `scripts/parked/power_monitor.py`; was machine `harvester_1`)
+
+- Status: parked on 2026-10-17 (ADR-017). Needs a free machine slot to run again. The results below stand for the monitor's last run.
 
 - Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.

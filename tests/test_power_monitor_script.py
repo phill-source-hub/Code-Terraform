@@ -31,7 +31,7 @@ def run_loop(path, game, owner):
         return
 
 
-SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "main" / "harvester_1.py"
+SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "parked" / "power_monitor.py"
 
 
 def _grid(net, stored, capacity):

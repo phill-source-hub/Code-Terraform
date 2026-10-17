@@ -1,79 +1,105 @@
-"""Power monitor: warn on a grid deficit or low battery. Read-only.
+"""Harvester: collect scanned items one at a time, nearest first, and store them in Inventory.
 
-Where it runs: machine script slot `harvester_1` (game file `harvester_1.py`). Placed on this
-    free slot as the first real script; it does not use the harvester.
-Self-contained on purpose (ADR-014): no imports. The rules are a copy of
-    scripts/libs/power_status.py. Tests check the copy gives the same messages.
-Inputs: none. Reads power_control.grids() and battery_1 every POLL_SECONDS of game time.
-Output: a grid message prints (or warns) only when it changes. The status line always shows
-    the grid state and battery_1's charge; battery_1 low (under 20%) is a warning.
-API facts relied on (docs/game/power.md): get_component, power_control.grids(), PowerGrid
-    .net (W), .stored (Wh), .capacity (Wh), Battery .get_level() and .get_capacity() (Wh);
-    warn, print, set_status, sleep.
+Where it runs: machine script slot `harvester_1` (self = this harvester). The harvester has its
+    own heat budget and does not draw from the base battery.
+Self-contained on purpose (ADR-014): no imports.
+Starting cell: E13 (base), from the save's harvester position (posRow 4, posCol 12).
+    The script tracks its own position from successful moves. A restart resets to E13.
+Loop, one step per pass (manual: harvester_1, "start with one nearby scanned item"):
+    1. cool down if heat is at or above HOT_HEAT (sleep one world hour);
+    2. read the scanner snapshot and pick the nearest "ok" item not yet collected;
+    3. if standing on it, collect, then store; otherwise move one cardinal cell toward it.
+Held item: collect returns "holding" while an item is in the held slot. The script stores it first.
+Failure: busy or moving statuses wait SHORT_SECONDS. A refused move (invalid, too_far) drops the
+    target. A full inventory waits. Every blocked path shows a status and sleeps.
+API facts relied on (docs/game/harvester.md): self.move, self.collect, self.store, self.get_heat,
+    get_component("scanner_1").get_scanned(), get_component("clock"), set_status, print, sleep.
 """
 
-POLL_SECONDS = 5
-LOW_STORAGE_FRACTION = 0.2
+BASE_ROW = 4
+BASE_COL = 12
+HOT_HEAT = 80
+SHORT_SECONDS = 5
 
 
-def stored_fraction(stored_wh, capacity_wh):
-    if capacity_wh <= 0:
-        return 0.0
-    return min(max(stored_wh / capacity_wh, 0.0), 1.0)
+def sector_id(row, col):
+    return chr(65 + row) + str(col + 1)
 
 
-def classify(net_w, stored_wh, capacity_wh):
-    alerts = []
-    if net_w < 0:
-        alerts.append("power deficit: net " + str(round(net_w)) + " W")
-    if capacity_wh > 0 and stored_fraction(stored_wh, capacity_wh) < LOW_STORAGE_FRACTION:
-        alerts.append(
-            "low battery: " + str(round(stored_fraction(stored_wh, capacity_wh) * 100)) + "% stored"
-        )
-    return alerts
+def parse_sector(name):
+    return ord(name[0]) - 65, int(name[1:]) - 1
 
 
-def battery_percent(battery):
-    if battery is None:
-        return None
-    capacity = battery.get_capacity()
-    if capacity <= 0:
-        return None
-    return round(battery.get_level() / capacity * 100)
+def distance(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def totals(grids):
-    net = 0.0
-    stored = 0.0
-    capacity = 0.0
-    for grid in grids:
-        net += grid.net
-        stored += grid.stored
-        capacity += grid.capacity
-    return net, stored, capacity
+def next_step(position, target):
+    row, col = position
+    if row != target[0]:
+        return (row + (1 if target[0] > row else -1), col)
+    return (row, col + (1 if target[1] > col else -1))
 
 
-power = get_component("power_control")
-battery = get_component("battery_1")
-if power is None:
-    set_status("power_control not found", "error")
-else:
-    last_message = None
-    while True:
-        net, stored, capacity = totals(power.grids())
-        alerts = classify(net, stored, capacity)
-        percent = battery_percent(battery)
-        if percent is not None and percent < LOW_STORAGE_FRACTION * 100:
-            alerts.append("battery_1 low: " + str(percent) + "%")
-        message = "; ".join(alerts) or "power ok"
-        if message != last_message:
-            if alerts:
-                warn(message)
+scanner = get_component("scanner_1")
+clock = get_component("clock")
+cool_seconds = 3600
+if clock is not None:
+    cool_seconds = clock.real_seconds_per_hour()
+
+position = (BASE_ROW, BASE_COL)
+done = []
+
+while True:
+    if self.get_heat() >= HOT_HEAT:
+        set_status("cooling", "warn")
+        sleep(cool_seconds)
+        continue
+    if scanner is None:
+        set_status("scanner_1 not found", "error")
+        sleep(cool_seconds)
+        continue
+
+    snapshot = scanner.get_scanned()
+    candidates = [name for name in snapshot if snapshot[name].status == "ok" and name not in done]
+    if not candidates:
+        set_status("no items to collect", "info")
+        sleep(SHORT_SECONDS * 12)
+        continue
+
+    target_name = min(candidates, key=lambda name: distance(position, parse_sector(name)))
+    target = parse_sector(target_name)
+
+    if position == target:
+        pickup = self.collect()
+        if pickup.status == "ok" or pickup.status == "holding":
+            stored = self.store()
+            if stored.status == "ok":
+                print("stored " + str(stored.item_id) + " from " + target_name)
             else:
-                print(message)
-            last_message = message
-        status = message
-        if percent is not None:
-            status = status + " | battery_1 " + str(percent) + "%"
-        set_status(status, "warn" if alerts else "info")
-        sleep(POLL_SECONDS)
+                set_status("store " + stored.status, "warn")
+                sleep(SHORT_SECONDS)
+                continue
+            if pickup.status == "ok":
+                done.append(target_name)
+        elif pickup.status == "empty":
+            done.append(target_name)
+        elif pickup.status == "overheated":
+            sleep(cool_seconds)
+        else:
+            set_status("collect " + pickup.status, "info")
+            sleep(SHORT_SECONDS)
+        continue
+
+    step = next_step(position, target)
+    moved = self.move(sector_id(step[0], step[1]))
+    if moved.status == "ok" or moved.status == "already_here":
+        position = step
+    elif moved.status == "overheated":
+        sleep(cool_seconds)
+    elif moved.status in ("moving", "busy"):
+        sleep(SHORT_SECONDS)
+    else:
+        done.append(target_name)
+        set_status("move " + moved.status + " to " + target_name, "warn")
+        sleep(SHORT_SECONDS)
