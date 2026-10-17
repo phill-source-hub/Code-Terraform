@@ -150,10 +150,33 @@ def test_missing_atmosphere_is_an_error_status():
     assert game.statuses == [("atmosphere not found", "error")]
 
 
-def test_loop_has_no_sleep():
-    # Continuous running: no sleep means the fake clock never advances.
+def test_each_pass_sleeps_one_second():
+    # Three full passes, one second each. The fourth set_intake call stops the script.
     game, _, _ = run([10.0, 10.0, 10.0], passes=3)
-    assert game.clock.now == 0.0
+    assert game.clock.now == 3.0
+
+
+class StopOnSecondSleep(FakeGame):
+    """Stops on the second sleep, so the missing-atmosphere branch is seen to pause, not spin."""
+
+    def sleep(self, seconds, /):
+        super().sleep(seconds)
+        if self.clock.now >= 2.0:
+            raise _Stop
+
+
+def test_missing_atmosphere_pauses_instead_of_spinning():
+    game = StopOnSecondSleep()
+    owner = SimpleNamespace(set_intake=lambda value: None, waste=lambda: 30.0)
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
+    assert game.clock.now == 2.0
+    assert game.statuses == [("atmosphere not found", "error")] * 2
 
 
 def test_machine_script_has_no_imports():
