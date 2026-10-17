@@ -67,6 +67,19 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 |      | fe9a45c      |        |       |
 
+### X-002: Corrupted Archive (`corrupted_archive`)
+
+- Script: `scripts/contracts/corrupted_archive.py`, synced to the game root as `corrupted_archive.py`.
+- Briefing (owner-supplied): 10x10 grid, 50 words each appearing twice. Transmit `[row1, col1, row2, col2]` for each pair.
+- Method: reads each cell once (100 `flip` calls), pairs on second sighting.
+- Expected console: `50 pairs sent: correct <message>`.
+- Pass criteria: transmit status `correct`. Contract status `completed`.
+- Failure lines: `corrupted_archive failed: ...` means nothing was sent. Paste that line.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Scripts
 
 ### power_monitor (machine `harvester_1`, file `harvester_1.py`)
