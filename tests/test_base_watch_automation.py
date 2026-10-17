@@ -78,8 +78,8 @@ def test_a_low_battery_is_a_warning():
 
 
 def test_a_silent_machine_is_reported_with_its_age():
-    game = run(grids=[grid()], bus=fresh_bus(harvester_1=120, scanner_1=5))
-    assert "warning: harvester_1: silent for 120 s\n" in game.printed
+    game = run(grids=[grid()], bus=fresh_bus(harvester_1=200, scanner_1=5))
+    assert "warning: harvester_1: silent for 200 s\n" in game.printed
 
 
 def test_a_deployed_machine_that_never_reported_is_reported():
