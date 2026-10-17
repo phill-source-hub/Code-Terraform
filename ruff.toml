@@ -6,7 +6,7 @@ target-version = "py312"
 # Game-provided names that are not CPython builtins. Declared so F821 (undefined
 # name) does not fire on game scripts. Add a name only when its stub line is
 # recorded in docs/api-notes.md. The harness (tests/harness) is the runtime check.
-builtins = ["get_component", "get_game_version", "set_status", "notify", "sleep"]
+builtins = ["get_component", "get_game_version", "set_status", "notify", "sleep", "warn"]
 
 # Game scripts run in a Python-like interpreter, not CPython. Keep the rules that
 # catch real bugs; skip the style-only groups that fight the game's idioms.

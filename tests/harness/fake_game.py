@@ -11,6 +11,7 @@ name only with a matching test; see docs/api-notes.md.
 
 from __future__ import annotations
 
+import builtins
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +52,7 @@ class FakeGame:
     clock: FakeClock = field(default_factory=FakeClock)
     components: dict[str, FakeComponent] = field(default_factory=dict)
     printed: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     statuses: list[tuple[str, str]] = field(default_factory=list)
     notifications: list[tuple[str, str]] = field(default_factory=list)
 
@@ -59,6 +61,9 @@ class FakeGame:
 
     def sleep(self, seconds: float, /) -> None:
         self.clock.advance(seconds)
+
+    def warn(self, *values: object, sep: str = " ", end: str = "\n") -> None:
+        self.warnings.append(sep.join(str(v) for v in values) + end)
 
     def set_status(self, message: str, level: str = "info") -> None:
         self.statuses.append((message, level))
@@ -72,8 +77,13 @@ class FakeGame:
     def builtins(self) -> dict[str, Any]:
         """The only names a script can see. Anything else raises NameError."""
         return {
+            # Libraries load through CPython's import here; tests put scripts/libs on sys.path.
+            # The game's own loader is UNVERIFIED beyond the manual's examples.
+            "__import__": builtins.__import__,
             "print": self.print,
+            "warn": self.warn,
             "sleep": self.sleep,
+            "round": round,
             "set_status": self.set_status,
             "notify": self.notify,
             "get_component": self.get_component,

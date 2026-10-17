@@ -112,6 +112,9 @@ def plan_one(target: str, wanted: bytes, current: bytes | None, last_written: st
     current_hash = sha256(current)
     if current_hash == wanted_hash:
         return Action("noop", target)
+    # An empty game file (the game's placeholder for a free machine slot) holds nothing to lose.
+    if last_written is None and current == b"":
+        return Action("create", target, "replaces empty game placeholder")
     if last_written is None:
         return Action("conflict", target, "exists in game and was not written by this tool")
     if current_hash == last_written:

@@ -61,6 +61,12 @@ def test_plan_conflicts_on_unknown_game_file_with_different_content():
     assert "not written by this tool" in action.reason
 
 
+def test_plan_adopts_empty_game_placeholder():
+    action = plan_one("scanner_1.py", b"x", b"", None)
+    assert action.kind == "create"
+    assert "placeholder" in action.reason
+
+
 def test_plan_conflicts_when_game_edited_since_our_last_write():
     last = sha256(b"old")
     assert plan_one("a.py", b"new", b"game edit", last).kind == "conflict"

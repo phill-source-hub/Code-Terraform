@@ -25,7 +25,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Script: `scripts/probes/probe_thermometer.py`
 - Where it runs: attach to a machine script slot or use Run Script in Game. Read-only.
 - Setup state: save open, game unpaused. No power needed for the thermometer (`powered: true` in the save).
-- How to run: copy the file into the game's scripts folder as a machine script (name it for a machine with a script slot, see the open question in README), then Run Script in Game. Do not overwrite an existing script you want to keep.
+- How to run: already copied to the game as `scanner_1.py` (its empty placeholder). Open the `scanner_1` machine and press Run Script in Game. Afterwards restore `scanner_1.py` to empty or leave the probe there until the next probe.
 - Expected console output (4 lines; the last line is a number in Celsius, any value is fine):
   1. `game version: <build string>`
   2. `thermometer found: True`
@@ -39,4 +39,17 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 ## Scripts
 
-No game scripts yet. The first checklist comes with the first example script.
+### power_monitor (machine `harvester_1`, file `harvester_1.py`)
+
+- Where it runs: machine `harvester_1`. Library `lib/power_status.py` is also copied.
+- Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.
+- How to run: Run Script in Game on `harvester_1`. It keeps running and polls every 5 s of game time.
+- Expected output, healthy grid: console line `power ok`, status bar info `power ok`. Printed once, not every poll.
+- Expected output, deficit: console warning `power deficit: net -<N> W`, status warn with the same text.
+- Expected output, low battery: console warning `low battery: <N>% stored`.
+- Expected behaviour: no machine state changes. Stop script ends the loop.
+- Pass criteria: each state above shows once and changes only when the state changes.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      |              |        |       |
