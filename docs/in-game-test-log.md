@@ -54,6 +54,38 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
+| 2026-10-17 (afternoon, 78° sun) | fe9a45c | PASS (tracking) | Tilt 11° vs rule 12°: within the sampling lag at 1/12-hour sampling. Output 43/50 W, efficiency 87%. |
+| 2026-10-17 (morning, 90° sun, sample 1/60 h) | fe9a45c | PASS | Tilt 0°, output 50/50 W, efficiency 100%. Rule holds exactly. Efficiency falls with lower sun elevation, not only with tilt error (UNVERIFIED model). |
+
+## Scanner and harvester
+
+### SC-001: Scanner sweep (`scanner_1`)
+
+- Script: `scripts/main/scanner_1.py` (replaces the P-001 probe, which passed). Self-contained.
+- Setup: scanner powered; a few sectors around E13 have items.
+- Prerequisite: Data Archive research (for the saved map). Without it the scan still runs but nothing is saved.
+- Run: Run Script in Game on `scanner_1`.
+- Expected: one snake pass over all 192 sectors (A1 to A24, then B24 to B1, and so on). Console lines for found items only. Status bar `map of 192 sectors saved` at the end. Repeats every world hour.
+- Pass: 192 scans, each sector once per pass. The Data Archive key `scanner.map` holds 192 entries with status, name and value. Check it in Computer > Data Archive.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### HV-001: Harvester collect and store (`harvester_1`)
+
+- Script: `scripts/main/harvester_1.py`. Replaces the power monitor on this slot; the monitor is parked in `scripts/parked/power_monitor.py`.
+- Setup: SC-001 passed (scanned items exist). Harvester at E13. Inventory has room.
+- Run: Run Script in Game on `harvester_1`.
+- Expected: moves one cell per pass toward the nearest item (row first, then column). On arrival: collect, then `stored <item_id> from <sector>` printed. Heat stays under 80; status `cooling` appears above that.
+- Pass: the first item is collected and stored; the harvester moves between items without refusal; no `move too_far` warnings.
+- Planning: each trip is chosen by path heat (item cell 1, other cell 7), then steps. A trip that would reach heat 80 waits with status `cooling before the next trip`.
+- Each `stored` line now ends with `heat <N>`, the heat after the trip. Compare it with the planner's estimate (path heat from the map) to check the heat model.
+- Position is read from the game each pass (`get_position`), so the start cell does not matter. Check the first move's sector in the log matches the harvester's real position.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
 
 ## Atmosphere
 
@@ -192,7 +224,9 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ## Scripts
 
-### power_monitor (machine `harvester_1`, file `harvester_1.py`)
+### power_monitor (PARKED in `scripts/parked/power_monitor.py`; was machine `harvester_1`)
+
+- Status: parked on 2026-10-17 (ADR-017). Needs a free machine slot to run again. The results below stand for the monitor's last run.
 
 - Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.

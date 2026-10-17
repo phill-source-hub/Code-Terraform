@@ -215,3 +215,12 @@ def test_find_game_edits_ignores_unchanged_files_and_help_requests():
 
 def test_find_game_edits_ignores_files_we_never_wrote():
     assert find_game_edits({"a.py": b"x"}, {"a.py": b"hand"}, {}) == []
+
+
+def test_crlf_and_lf_copies_are_the_same_content():
+    from tools.sync_to_game import normalize
+
+    assert sha256(b"a\r\nb\r\n") == sha256(b"a\nb\n")
+    assert normalize(b"x\r\ny") == b"x\ny"
+    same = plan_one("a.py", b"a\r\nb\r\n", b"a\nb\n", sha256(b"a\nb\n"))
+    assert same.kind == "noop"

@@ -97,3 +97,39 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `harvester_1.py` carries a copy of the `power_status` rules and imports nothing. `scripts/libs/power_status.py` remains the tested source. Parity tests compare the copy's messages with the library's.
 - Why: its import from `lib/` would fail without Shared Library research, the same blocker that stopped the relay contract.
+
+## ADR-017: Harvester owns its slot; power monitor is parked
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` now controls the harvester. The power monitor moves to `scripts/parked/power_monitor.py`, which the sync tool does not copy. It returns once a free machine slot is chosen.
+- Why: the owner asked for the harvester script on this slot. The monitor's tests still run against the parked copy.
+
+## ADR-018: Sync compares line-ending-normalised content
+
+- Date: 2026-10-17
+- Decision: the sync tool normalises CRLF to LF before hashing, comparing and writing. Repo files can have CRLF from Windows text writes. Game files have LF.
+- Why: byte comparison reported false conflicts (game and repo identical except for line endings). Re-based state entries were checked against game bytes before applying.
+
+## ADR-019: Harvester reads its position and held item from the game
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` calls `self.get_position()` and `self.get_held()` every pass instead of assuming E13 or tracking moves. A held item is stored first.
+- Why: a new save, or a later game point, need not start at E13. The manual gives both methods, and the held-slot check is its documented first step for a collect loop.
+
+## ADR-020: Scanner follows the harvester; scans the nearest unscanned sector
+
+- Date: 2026-10-17
+- Decision: `scanner_1.py` centres on the harvester's current sector and scans the nearest of the 192 sectors it has not yet scanned in this sweep. Once all are done it waits one world hour and starts again. This widens the scan outward as nearby sectors are cleared, so new items keep appearing.
+- Why: a fixed E13 sweep stops giving the harvester new targets once the nearby items are collected. The harvester only collects scanned items.
+
+## ADR-021: Scanner scans the whole grid once per pass and saves a map (supersedes ADR-020)
+
+- Date: 2026-10-17
+- Decision: `scanner_1.py` runs a snake pass over all 192 sectors from base, saves the results to the Data Archive as `scanner.map` (status, name, value per sector) at the end of each row, and repeats each world hour. The scanner does not move, so the scan costs no harvester heat.
+- Why: the scanner's self.scan is a base-side action (manual: scanner_1). A full map lets the harvester plan routes by heat and battery, which a nearest-first scan cannot do. ADR-020 is superseded.
+
+## ADR-022: Harvester plans trips by heat, not distance
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` runs a shortest-path search over the 8x24 grid each pass. Entering an item sector costs 1 heat, anything else 7. Items are ranked by (path heat, steps). A trip is taken only if heat stays under HOT_HEAT. Otherwise the harvester cools first. There is no battery model: the owner confirmed the harvester has no battery.
+- Why: heat is the only harvester budget in the manual, and the scanner map gives the item locations. Ranking by heat avoids empty cells where a detour through items is possible.
