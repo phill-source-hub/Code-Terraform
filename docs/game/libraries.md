@@ -80,7 +80,9 @@ from sensors import temp
 print(temp())
 ```
 
-## Repo mapping (ours)
+## Repo mapping (ours), corrected 2026-10-17
 
-- `scripts/libs/*.py` is the source. It is copied to the game's `lib/` by `tools/sync_to_game.py` (`apply` needs the owner's go-ahead).
+- Libraries are created in game: Ship → Computer → Library → **+ New**, one per file. The name is the import name (`from grid import ...`). Copying a file into the game's `lib/` folder does **not** register it. The game index (`codeterraform-scripts.json`) lists no libraries, and `scanner_1` failed with `No module named 'grid'` even with `lib/grid.py` on disk.
+- `scripts/libs/*.py` is the source. Paste each file's contents into its Library. `tools/sync_to_game.py` still copies to `lib/`, which is harmless but not how the game registers libraries.
+- Each library must be created before a script that imports it runs. Current set: `power_status`, `relay_hack`, `solar_tracker`, `grid`, `trip_log`, `job_queue`, `base_watch`.
 - Tests import the same file through the fake game harness. A Library must not use `self` or `panel`.
