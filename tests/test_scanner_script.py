@@ -1,5 +1,6 @@
-"""Adapter tests: the scanner_1 script against a fake scanner, harvester position and clock."""
+"""Adapter tests: the scanner_1 snake scan against a fake scanner, Data Archive and clock."""
 
+import json
 from contextlib import suppress
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,39 +11,115 @@ SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "main" / "scanner_
 
 
 class _Stop(Exception):
-    """Ends the scanner's endless loop after a set number of scans."""
+    """Ends the scanner's endless loop."""
 
 
-def scanner_script(
-    limit, harvester_position="E13", results=None, with_harvester=True, seconds=3600.0
-):
-    """Build a fake game and self. Stops after `limit` scans (the scan call raises _Stop)."""
+class StopOnSleep(FakeGame):
+    def sleep(self, seconds: float, /) -> None:
+        super().sleep(seconds)
+        raise _Stop
+
+
+def _notebook(saves: list):
+    def set_value(key, value):
+        # The Data Archive stores a copy and requires JSON-safe values (manual: Value rules).
+        saves.append((key, json.loads(json.dumps(value))))
+        return SimpleNamespace(status="ok", message="")
+
+    return FakeComponent(id="notebook", type_id="notebook", methods={"set": set_value})
+
+
+def run_grid(results=None, notebook=True, seconds=3600.0, source_override=None):
+    """Run one full pass of the scanner. Returns (scans, saves, game)."""
     results = results or {}
-    game = FakeGame()
-    game.components["clock"] = FakeComponent(
-        id="clock",
-        type_id="clock",
-        methods={"real_seconds_per_hour": lambda: seconds},
-    )
-    if with_harvester:
-        game.components["harvester_1"] = FakeComponent(
-            id="harvester_1",
-            type_id="harvester",
-            methods={"get_position": lambda: harvester_position},
-        )
     scans: list[str] = []
+    saves: list = []
+    game = StopOnSleep()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: seconds}
+    )
+    if notebook:
+        game.components["notebook"] = _notebook(saves)
 
     def scan(name):
         scans.append(name)
-        if len(scans) >= limit:
-            raise _Stop
-        return results.get(name, SimpleNamespace(status="empty", message="", name=None))
+        return results.get(name, SimpleNamespace(status="empty", message="", name=None, value=None))
 
     owner = SimpleNamespace(scan=scan)
-    return owner, game, scans
+    source = SCRIPT.read_text(encoding="utf-8")
+    if source_override:
+        source = source_override(source)
+    with suppress(_Stop):
+        run_script(source, game, filename=str(SCRIPT), extra_globals={"self": owner})
+    return scans, saves, game
 
 
-def run(owner, game):
+def test_first_row_runs_left_to_right_then_second_row_right_to_left():
+    scans, _, _ = run_grid()
+    assert scans[:3] == ["A1", "A2", "A3"]
+    assert scans[23] == "A24"
+    assert scans[24] == "B24"
+    assert scans[25] == "B23"
+
+
+def test_every_sector_is_scanned_exactly_once_in_one_pass():
+    scans, _, _ = run_grid()
+    assert len(scans) == 192
+    assert len(set(scans)) == 192
+
+
+def test_map_is_saved_at_the_end_of_each_row():
+    _, saves, _ = run_grid()
+    assert len(saves) == 8
+    assert all(key == "scanner.map" for key, _ in saves)
+    assert len(saves[0][1]) == 24
+    assert len(saves[-1][1]) == 192
+
+
+def test_map_entries_hold_status_name_and_value():
+    results = {"E13": SimpleNamespace(status="ok", message="", name="Soil Sample", value=50)}
+    _, saves, _ = run_grid(results=results)
+    final = saves[-1][1]
+    assert final["E13"] == {"status": "ok", "name": "Soil Sample", "value": 50}
+    assert final["A1"] == {"status": "empty", "name": None, "value": None}
+
+
+def test_prints_found_items_only():
+    results = {"C5": SimpleNamespace(status="ok", message="", name="Crystal Shard", value=200)}
+    _, _, game = run_grid(results=results)
+    assert game.printed == ["C5: Crystal Shard\n"]
+
+
+def test_other_statuses_warn_and_the_scan_goes_on():
+    results = {"A2": SimpleNamespace(status="busy", message="busy", name=None, value=None)}
+    scans, _, game = run_grid(results=results)
+    assert ("A2 busy", "warn") in game.statuses
+    assert len(scans) == 192
+
+
+def test_without_data_archive_the_scan_still_runs():
+    scans, saves, game = run_grid(notebook=False)
+    assert len(scans) == 192
+    assert saves == []
+    assert game.statuses[-1] == ("map of 192 sectors saved", "info")
+
+
+def test_failed_save_is_a_warning_not_a_stop():
+    game = StopOnSleep()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
+    )
+    game.components["notebook"] = FakeComponent(
+        id="notebook",
+        type_id="notebook",
+        methods={"set": lambda key, value: SimpleNamespace(status="invalid_key", message="bad")},
+    )
+    scans: list[str] = []
+    owner = SimpleNamespace(
+        scan=lambda name: (
+            scans.append(name) or SimpleNamespace(status="empty", message="", name=None, value=None)
+        )
+    )
     with suppress(_Stop):
         run_script(
             SCRIPT.read_text(encoding="utf-8"),
@@ -50,98 +127,12 @@ def run(owner, game):
             filename=str(SCRIPT),
             extra_globals={"self": owner},
         )
+    assert ("map save invalid_key: bad", "warn") in game.statuses
+    assert len(scans) == 192
 
 
-def test_first_scan_is_the_sector_the_harvester_stands_on():
-    owner, game, scans = scanner_script(limit=1, harvester_position="H24")
-    run(owner, game)
-    assert scans == ["H24"]
-
-
-def test_scans_outward_from_the_harvester_not_from_base():
-    # Harvester far from base: the next sectors are near it, not near E13.
-    owner, game, scans = scanner_script(limit=3, harvester_position="A1")
-    run(owner, game)
-    assert scans[0] == "A1"
-    assert set(scans[1:]) == {"A2", "B1"}
-
-
-def test_moves_centre_when_the_harvester_moves():
-    game = FakeGame()
-    positions = iter(["E13", "E14"])
-    game.components["harvester_1"] = FakeComponent(
-        id="harvester_1",
-        type_id="harvester",
-        methods={"get_position": lambda: next(positions, "E14")},
-    )
-    scans: list[str] = []
-
-    def scan(name):
-        scans.append(name)
-        if len(scans) >= 2:
-            raise _Stop
-        return SimpleNamespace(status="empty", message="", name=None)
-
-    owner = SimpleNamespace(scan=scan)
-    game.components["clock"] = FakeComponent(
-        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
-    )
-    run(owner, game)
-    assert scans == ["E13", "E14"]
-
-
-def test_falls_back_to_base_when_no_harvester():
-    owner, game, scans = scanner_script(limit=1, with_harvester=False)
-    run(owner, game)
-    assert scans == ["E13"]
-
-
-def test_prints_found_items_and_empty_sectors():
-    results = {"E13": SimpleNamespace(status="ok", message="", name="Soil Sample")}
-    owner, game, _ = scanner_script(limit=3, results=results)
-    run(owner, game)
-    # Ties break by row first, so D13 comes before E12.
-    assert game.printed == ["E13: Soil Sample\n", "D13: empty\n"]
-
-
-def test_other_statuses_warn():
-    results = {"E13": SimpleNamespace(status="busy", message="busy", name=None)}
-    owner, game, _ = scanner_script(limit=2, results=results)
-    run(owner, game)
-    assert ("E13 busy", "warn") in game.statuses
-
-
-def test_progress_is_reported_in_status():
-    owner, game, _ = scanner_script(limit=3)
-    run(owner, game)
-    assert game.statuses[-1] == ("2 of 192 scanned, centre E13", "info")
-
-
-def test_a_finished_grid_restarts_after_one_world_hour():
-    # Stop on the sleep that ends the full sweep. Make the sweep tiny by pre-filling scanned.
-    scans: list[str] = []
-    owner = SimpleNamespace(
-        scan=lambda name: (
-            scans.append(name) or SimpleNamespace(status="empty", message="", name=None)
-        )
-    )
-    source = SCRIPT.read_text(encoding="utf-8")
-    # Shrink the grid to 1 sector so one scan finishes it; the sleep then stops the loop.
-    source = source.replace("ROWS = 8", "ROWS = 1").replace("COLS = 24", "COLS = 1")
-    source = source.replace("BASE_ROW = 4", "BASE_ROW = 0").replace("BASE_COL = 12", "BASE_COL = 0")
-
-    class StopAtSleep(FakeGame):
-        def sleep(self, seconds, /):
-            super().sleep(seconds)
-            raise _Stop
-
-    game = StopAtSleep()
-    game.components["clock"] = FakeComponent(
-        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 720.0}
-    )
-    with suppress(_Stop):
-        run_script(source, game, filename=str(SCRIPT), extra_globals={"self": owner})
-    assert scans == ["A1"]
+def test_repeats_after_one_world_hour():
+    _, _, game = run_grid(seconds=720.0)
     assert game.clock.now == 720.0
 
 

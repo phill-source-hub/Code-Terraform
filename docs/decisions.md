@@ -115,3 +115,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `scanner_1.py` centres on the harvester's current sector and scans the nearest of the 192 sectors it has not yet scanned in this sweep. Once all are done it waits one world hour and starts again. This widens the scan outward as nearby sectors are cleared, so new items keep appearing.
 - Why: a fixed E13 sweep stops giving the harvester new targets once the nearby items are collected. The harvester only collects scanned items.
+
+## ADR-021: Scanner scans the whole grid once per pass and saves a map (supersedes ADR-020)
+
+- Date: 2026-10-17
+- Decision: `scanner_1.py` runs a snake pass over all 192 sectors from base, saves the results to the Data Archive as `scanner.map` (status, name, value per sector) at the end of each row, and repeats each world hour. The scanner does not move, so the scan costs no harvester heat.
+- Why: the scanner's self.scan is a base-side action (manual: scanner_1). A full map lets the harvester plan routes by heat and battery, which a nearest-first scan cannot do. ADR-020 is superseded.

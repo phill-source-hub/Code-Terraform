@@ -61,9 +61,10 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 - Script: `scripts/main/scanner_1.py` (replaces the P-001 probe, which passed). Self-contained.
 - Setup: scanner powered; a few sectors around E13 have items.
-- Run: Run Script in Game on `scanner_1`, with `harvester_1` running.
-- Expected: the scanner scans the nearest unscanned sector to the harvester each pass. First scan is the harvester's own sector. Console lines `<sector>: <name>` or `<sector>: empty`. Status bar `<n> of 192 scanned, centre <sector>`. Scanned sectors keep appearing as the harvester moves.
-- Pass: the scan centre follows the harvester (not fixed at E13); new sectors keep being scanned after the nearby items are collected; no `ValueError`.
+- Prerequisite: Data Archive research (for the saved map). Without it the scan still runs but nothing is saved.
+- Run: Run Script in Game on `scanner_1`.
+- Expected: one snake pass over all 192 sectors (A1 to A24, then B24 to B1, and so on). Console lines for found items only. Status bar `map of 192 sectors saved` at the end. Repeats every world hour.
+- Pass: 192 scans, each sector once per pass. The Data Archive key `scanner.map` holds 192 entries with status, name and value. Check it in Computer > Data Archive.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|

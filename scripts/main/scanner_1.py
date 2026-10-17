@@ -1,72 +1,60 @@
-"""Scanner: scan the nearest unscanned sector to the harvester, so new items keep appearing.
+"""Scanner: snake-scan the whole grid, save the results as a map, and repeat each world hour.
 
 Where it runs: machine script slot `scanner_1` (self = this scanner).
 Self-contained on purpose (ADR-014): no imports.
 Grid (manual, scanner_1): rows A-H map to 0-7, columns 1-24 map to 0-23. Base is E13.
-Centre: the harvester's current sector, read with get_component("harvester_1").get_position().
-    The manual gives this as a plain read; if the harvester is missing, the centre is base (E13).
-Method, one scan per pass: among the 192 sectors not yet scanned in this sweep, scan the one
-    nearest the harvester. The search widens on its own as nearby sectors are done, so the
-    scanner reaches new ground when the harvester has cleared its area.
-When every sector has been scanned, the sweep starts again after one world-clock hour.
-Results are kept in the scanner's snapshot (get_scanned), which the harvester reads.
-Failure: a result status other than ok or empty is shown as a warning, and the sweep goes on.
-API facts relied on (docs/game/harvester.md): self.scan(sector_id) -> ScanResult (.status,
-    .message, .name); chr(); get_component("harvester_1").get_position();
-    get_component("clock").real_seconds_per_hour(); set_status, print, sleep.
+    The scanner does not move. Scanning every sector from here costs no harvester heat or power.
+Method: a snake (boustrophedon) pass. Row A runs left to right, row B right to left, and so on.
+    Each result goes into a map: sector id -> {status, name, value}.
+Saving: the map is written to the Data Archive under MAP_KEY (`notebook.set`) at the end of each
+    row, so a stop part-way keeps what was scanned. The Data Archive needs its research. Without
+    it the scanner still scans and the harvester still reads the scanner snapshot.
+Repeat: the full grid is scanned again after one world-clock hour, so the map follows changes.
+Failure: a result status other than ok or empty is shown as a warning, and the scan goes on.
+    A failed save is shown as a warning. The scan goes on.
+API facts relied on (docs/game/harvester.md and manual Data Archive): self.scan(sector_id) ->
+    ScanResult (.status, .name, .value); get_component("notebook") (None until Data Archive
+    research); notebook.set(key, value) -> ActionResult (.status, .message); chr(); get_component
+    ("clock").real_seconds_per_hour(); set_status, print, sleep.
 """
 
-BASE_ROW = 4
-BASE_COL = 12
 ROWS = 8
 COLS = 24
+MAP_KEY = "scanner.map"
 
 
 def sector_id(row, col):
     return chr(65 + row) + str(col + 1)
 
 
-def parse_sector(name):
-    return ord(name[0]) - 65, int(name[1:]) - 1
+def snake_order():
+    """(sector id, last sector of its row) in snake order."""
+    order = []
+    for row in range(ROWS):
+        cols = list(range(COLS)) if row % 2 == 0 else list(range(COLS - 1, -1, -1))
+        for index, col in enumerate(cols):
+            order.append((sector_id(row, col), index == len(cols) - 1))
+    return order
 
 
-def distance(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-
-def all_sectors():
-    return [sector_id(r, c) for r in range(ROWS) for c in range(COLS)]
-
-
-harvester = get_component("harvester_1")
+notebook = get_component("notebook")
 clock = get_component("clock")
-sweep_seconds = 3600
+repeat_seconds = 3600
 if clock is not None:
-    sweep_seconds = clock.real_seconds_per_hour()
-
-scanned = []
+    repeat_seconds = clock.real_seconds_per_hour()
 
 while True:
-    if harvester is not None:
-        centre_name = harvester.get_position()
-    else:
-        centre_name = sector_id(BASE_ROW, BASE_COL)
-    centre = parse_sector(centre_name)
-
-    remaining = [name for name in all_sectors() if name not in scanned]
-    if not remaining:
-        set_status("grid scanned, starting again", "info")
-        scanned = []
-        sleep(sweep_seconds)
-        continue
-
-    name = min(remaining, key=lambda sector: distance(centre, parse_sector(sector)))
-    result = self.scan(name)
-    scanned.append(name)
-    if result.status == "ok":
-        print(name + ": " + result.name)
-    elif result.status == "empty":
-        print(name + ": empty")
-    else:
-        set_status(name + " " + result.status, "warn")
-    set_status(str(len(scanned)) + " of 192 scanned, centre " + centre_name, "info")
+    grid_map = {}
+    for name, row_end in snake_order():
+        result = self.scan(name)
+        grid_map[name] = {"status": result.status, "name": result.name, "value": result.value}
+        if result.status == "ok":
+            print(name + ": " + result.name)
+        elif result.status != "empty":
+            set_status(name + " " + result.status, "warn")
+        if row_end and notebook is not None:
+            saved = notebook.set(MAP_KEY, grid_map)
+            if saved.status != "ok":
+                set_status("map save " + saved.status + ": " + saved.message, "warn")
+    set_status("map of " + str(len(grid_map)) + " sectors saved", "info")
+    sleep(repeat_seconds)
