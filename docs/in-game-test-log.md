@@ -44,7 +44,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Script: `scripts/main/solar_1.py` (self-contained, ADR-014). Rule: tilt = 90 - sun elevation, from `clock.get_elevation()`. Library copy: `scripts/libs/solar_tracker.py` (tested source; not imported by the game).
 - Where it runs: machine `solar_1`, a Solar Generator. Buy one from the Shop (500 cr) and name it `solar_1` if the id differs.
 - Setup state: sun up. Tilt is at 90 (rest) when the script starts.
-- How to run: Run Script in Game on `solar_1`. It samples every 1/12 of a world hour (about 5 world minutes).
+- How to run: Run Script in Game on `solar_1`. It samples every 1/60 of a world hour (about 1 world minute).
 - Expected: status bar `tilt <N> deg` (info). `N` = 90 minus the sun's elevation, so it drifts as the sun moves. At night the status shows `tilt 90.0 deg`.
 - Expected behaviour: `get_output()` is near the daytime maximum once the tilt has settled. Tilt is never outside 0-90.
 - Pass criteria: no error status. Output stays near its peak through the day. Stopping the script returns the panel to 90.

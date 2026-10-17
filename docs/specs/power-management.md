@@ -9,7 +9,7 @@ Keep the base's power supply steady: warn early, track the sun, and keep the bat
 ## Scripts (in order)
 
 1. **power_monitor** (exists, `harvester_1`). Read-only. Warns on a grid deficit or battery under 20%. L3 pending.
-2. **solar_tracker** (solar generator `solar_1`). Writes tilt. Sets tilt = 90° − sun elevation (`clock.get_elevation()`, VERIFIED docs), clamped 0-90°. Samples every 1/12 world hour. Tilt resets to 90° when the script stops. Needs a Solar Generator (500 cr, VERIFIED docs).
+2. **solar_tracker** (solar generator `solar_1`). Writes tilt. Sets tilt = 90° − sun elevation (`clock.get_elevation()`, VERIFIED docs), clamped 0-90°. Samples every 1/60 world hour. Tilt resets to 90° when the script stops. Needs a Solar Generator (500 cr, VERIFIED docs).
 3. **battery_charger_queue** (new, battery charger). Writes charge jobs. Queues each low cell with `charge(slot, target)`, skips full cells, reports queue state. Needs Battery Charger research (Oxygen 25) and purchase (1,500 cr, VERIFIED docs).
 
 ## Success criteria
