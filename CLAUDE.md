@@ -11,6 +11,18 @@ Scripting repo for the game Code: Terraform (Steam 868160, AppsMafia). Pet proje
 - Never write to the game folder (`%APPDATA%\io.codeterraform.game\save_mvcjaxut_26ndfi_scripts`) or any path outside this repo without asking.
 - The game folder holds generated files (stubs, workspace, logs, saves). Leave them alone.
 
+## Game docs
+
+- Extracts from the in-game DOCS manual (build `fe9a45c`) live in `docs/game/`. Index: `docs/game/README.md`.
+- Facts from those files are VERIFIED (docs). Stub-only facts are VERIFIED (stub). Everything else is UNVERIFIED.
+- Loops: the game yields during `while` loops by itself, but use `sleep()` to pace polling. Every loop still needs a bound or a sleep.
+
+## Game folder: read-only until the owner says otherwise
+
+- The owner is finishing the in-game tutorial. Do not write to the game folder (`%APPDATA%\io.codeterraform.game\save_mvcjaxut_26ndfi_scripts`) until the owner says the tutorial is done.
+- `tasks.ps1 sync` is a dry run. `tasks.ps1 status` is read-only (logs and script status). Use `status` to check errors.
+- `tools/sync_to_game.py apply` writes only the files we own. Conflicts are refused, never overwritten.
+
 ## Layout
 
 - `scripts/main/` per-machine programs, file named as the machine id (game root `<id>.py`).

@@ -18,6 +18,20 @@ python -m venv .venv
 git config core.hooksPath .githooks   # enables the pre-commit check, once per clone
 ```
 
+## Sync to the game folder
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tasks.ps1 sync     # dry run: shows what would be copied
+powershell -NoProfile -ExecutionPolicy Bypass -File tasks.ps1 status   # read-only: game warnings, errors, script status
+python tools/sync_to_game.py apply                                      # writes to the game folder (not run yet)
+```
+
+`apply` writes only our files. It never overwrites a game file that changed since our last sync (see ADR-009). Game files it refuses are listed; resolve them by hand. Do not run `apply` until the in-game tutorial is complete (ADR-011).
+
+## Game reference
+
+Extracts from the in-game DOCS manual (build `fe9a45c`) are in [docs/game/](docs/game/README.md).
+
 ## Run the checks
 
 ```powershell

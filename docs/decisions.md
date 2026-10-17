@@ -49,3 +49,21 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `ruff.toml` is conservative (line length 100, selected rule groups E F W B UP SIM I). The game's own Ruff is not used because no generated Ruff config was found in the game folder.
 - Why: the game applies a `ruff.toml` only from its scripts folder or above, so the repo config governs repo runs only. Known game-vs-Ruff syntax differences go in api-notes.
+
+## ADR-009: Sync is one-way, hash-guarded, and never overwrites game edits
+
+- Date: 2026-10-17
+- Decision: `tools/sync_to_game.py` copies `scripts/main/*.py` to the game root and `scripts/libs/*.py` to `lib/`. It records the sha256 of each file it writes in `.sync-state.json` (gitignored). A game file that differs from that record is a conflict and is never overwritten. Protected names (`boot.py`, `user_stubs.py`, generated stubs and JSON, `logs/`, `.vscode/`, `.zed/`) are refused. `apply` refuses to run while conflicts exist unless `--skip-conflicts` is given. Dry run is the default.
+- Why: the game writes in-game edits back to disk, so a plain copy would silently discard the owner's changes. Hash state tells "we changed it" apart from "the owner changed it".
+
+## ADR-010: Game reference is our own short extracts, not a copy of the manual
+
+- Date: 2026-10-17
+- Decision: facts from the owner's in-game DOCS manual go into `docs/game/*.md` as short tables and notes, tagged VERIFIED (docs) with the build id. The full manual is not copied into the repo. Sections not yet needed stay listed as "not yet extracted".
+- Why: the manual is about 1.7 MB and is the owner's material. Our notes stay small, and each fact can be traced to a section of the manual.
+
+## ADR-011: Game-folder writes wait for the owner's tutorial
+
+- Date: 2026-10-17
+- Decision: no writes to the game folder (scripts, sync apply) until the owner says the in-game tutorial is complete. Read-only status checks are allowed.
+- Why: the owner is partway through a fresh game. Our scripts would change tutorial state and could break the owner's own experiments.
