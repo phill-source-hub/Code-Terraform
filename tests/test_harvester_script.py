@@ -183,3 +183,65 @@ def test_stored_line_reports_the_heat_after_the_trip():
     owner.get_heat = lambda: 42.0
     game = run(owner, {"E13": ok_item()})
     assert game.printed == ["stored soil_sample from E13 heat 42.0\n"]
+
+
+def _archive(values: dict, saves: list, set_status="ok"):
+    """Fake Data Archive: `get` returns the stored value or the default; `set` records the write."""
+
+    def get(key, default=None):
+        return values.get(key, default)
+
+    def set_value(key, value):
+        saves.append((key, value))
+        values[key] = value
+        return SimpleNamespace(status=set_status, message="")
+
+    return FakeComponent(id="notebook", type_id="notebook", methods={"get": get, "set": set_value})
+
+
+def test_an_empty_sector_is_recorded_in_the_archive_as_visited():
+    saves: list = []
+    game = StopOnSleep()
+    game.components["notebook"] = _archive({}, saves)
+    owner, _ = harvester(collect_status="empty")
+    run(owner, {"E13": ok_item()}, game=game)
+    assert saves == [("harvester.done", {"pass": 0, "sectors": ["E13"]})]
+
+
+def test_a_visited_sector_from_the_same_pass_is_not_visited_again():
+    game = StopOnSleep()
+    game.components["notebook"] = _archive(
+        {"scanner.pass": 4, "harvester.done": {"pass": 4, "sectors": ["E13"]}}, []
+    )
+    record: list = []
+    owner, _ = harvester(record=record)
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"E13": ok_item(), "E14": ok_item()}, game=game)
+    assert record == ["E14"]
+
+
+def test_a_new_scanner_pass_clears_the_visited_log():
+    game = StopOnSleep()
+    game.components["notebook"] = _archive(
+        {"scanner.pass": 5, "harvester.done": {"pass": 4, "sectors": ["E13"]}}, []
+    )
+    record: list = []
+    owner, _ = harvester(record=record)
+    owner.collect = lambda: record.append(("collect",)) or _stop_now()
+    run(owner, {"E13": ok_item()}, game=game)
+    assert record == [("collect",)]
+
+
+def test_a_refused_save_is_a_warning_and_the_harvester_carries_on():
+    game = StopOnSleep()
+    game.components["notebook"] = _archive({}, [], set_status="invalid_key")
+    owner, record = harvester(collect_status="empty")
+    run(owner, {"E13": ok_item()}, game=game)
+    assert ("done save invalid_key", "warn") in game.statuses
+    assert game.statuses[-1] == ("no items to collect", "info")
+
+
+def test_without_the_archive_the_visited_log_is_kept_for_this_run_only():
+    owner, record = harvester(collect_status="empty")
+    game = run(owner, {"E13": ok_item()})
+    assert game.statuses[-1] == ("no items to collect", "info")

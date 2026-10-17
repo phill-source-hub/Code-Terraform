@@ -2,7 +2,11 @@
 
 Where it runs: machine script slot `harvester_1` (self = this harvester). The harvester has no
     battery to manage; heat is its only budget (manual, Harvester: no battery is listed).
-Imports the shared `grid` Library for sector names and the heat route search (ADR-025).
+Imports the shared `grid` Library for sector names and the heat route search (ADR-025), and
+    `trip_log` for the sectors already visited in this scan pass.
+Visited log: kept in the Data Archive as `harvester.done`, so a game reload does not revisit
+    sectors. It restarts whenever `scanner.pass` changes, because a new map can hold new items
+    (ADR-026, backlog B-004). Without Data Archive research the log lives only in this run.
 Position and held item: read from the game every pass (get_position, get_held). Nothing is
     assumed about the start cell.
 Heat model (manual, Harvester): stepping onto an item sector +1; onto an empty sector +7;
@@ -26,6 +30,7 @@ API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, 
 """
 
 from grid import parse_sector, plan_routes, sector_id
+from trip_log import is_done, mark_done, reconcile
 
 HOT_HEAT = 80
 SHORT_SECONDS = 5
@@ -37,7 +42,31 @@ cool_seconds = 3600
 if clock is not None:
     cool_seconds = clock.real_seconds_per_hour()
 
-done = []
+notebook = get_component("notebook")
+
+
+def current_pass(archive):
+    if archive is None:
+        return 0
+    return archive.get("scanner.pass", 0)
+
+
+def stored_log(archive):
+    if archive is None:
+        return None
+    return archive.get("harvester.done", None)
+
+
+def save_log(archive, log):
+    # Saved after every change so a reload resumes from the last sector marked, not the start.
+    if archive is not None:
+        saved = archive.set("harvester.done", log)
+        if saved.status != "ok":
+            set_status("done save " + saved.status, "warn")
+    return log
+
+
+trip_log = reconcile(stored_log(notebook), current_pass(notebook))
 
 while True:
     if self.get_heat() >= HOT_HEAT:
@@ -58,9 +87,12 @@ while True:
             sleep(SHORT_SECONDS)
         continue
 
+    trip_log = reconcile(trip_log, current_pass(notebook))
     position = parse_sector(self.get_position())
     snapshot = scanner.get_scanned()
-    items = [name for name in snapshot if snapshot[name].status == "ok" and name not in done]
+    items = [
+        name for name in snapshot if snapshot[name].status == "ok" and not is_done(trip_log, name)
+    ]
     if not items:
         set_status("no items to collect", "info")
         sleep(SHORT_SECONDS * 12)
@@ -84,7 +116,7 @@ while True:
     if position == target:
         pickup = self.collect()
         if pickup.status == "ok":
-            done.append(target_name)
+            trip_log = save_log(notebook, mark_done(trip_log, target_name))
             stored = self.store()
             if stored.status == "ok":
                 print(
@@ -99,7 +131,7 @@ while True:
                 set_status("store " + stored.status, "warn")
                 sleep(SHORT_SECONDS)
         elif pickup.status == "empty":
-            done.append(target_name)
+            trip_log = save_log(notebook, mark_done(trip_log, target_name))
         elif pickup.status == "overheated":
             sleep(cool_seconds)
         else:
@@ -114,6 +146,6 @@ while True:
     elif moved.status in ("moving", "busy"):
         sleep(SHORT_SECONDS)
     elif moved.status not in ("ok", "already_here"):
-        done.append(target_name)
+        trip_log = save_log(notebook, mark_done(trip_log, target_name))
         set_status("move " + moved.status + " to " + target_name, "warn")
         sleep(SHORT_SECONDS)
