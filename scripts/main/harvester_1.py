@@ -2,7 +2,7 @@
 
 Where it runs: machine script slot `harvester_1` (self = this harvester). The harvester has no
     battery to manage; heat is its only budget (manual, Harvester: no battery is listed).
-Self-contained on purpose (ADR-014): no imports.
+Imports only the documented built-in `heapq` (route search queue, manual Built-in modules).
 Position and held item: read from the game every pass (get_position, get_held). Nothing is
     assumed about the start cell.
 Heat model (manual, Harvester): stepping onto an item sector +1; onto an empty sector +7;
@@ -24,6 +24,8 @@ API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, 
     self.move, self.collect, self.store, get_component("scanner_1").get_scanned(),
     get_component("clock"), set_status, print, sleep.
 """
+
+import heapq
 
 HOT_HEAT = 80
 SHORT_SECONDS = 5
@@ -50,8 +52,8 @@ def plan_routes(start, items):
     first = {start: None}
     frontier = [(0, 0, start)]
     while frontier:
-        index = min(range(len(frontier)), key=lambda i: frontier[i])
-        heat, steps, cell = frontier.pop(index)
+        heat, steps, cell = heapq.heappop(frontier)
+        # Stale entry: a cheaper route to this cell was pushed after this one.
         if (heat, steps) != best[cell]:
             continue
         for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
@@ -65,7 +67,7 @@ def plan_routes(start, items):
             if neighbour not in best or cost < best[neighbour]:
                 best[neighbour] = cost
                 first[neighbour] = neighbour if cell == start else first[cell]
-                frontier.append((cost[0], cost[1], neighbour))
+                heapq.heappush(frontier, (cost[0], cost[1], neighbour))
     return best, first
 
 
