@@ -67,3 +67,10 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 | Probe | Checks | Result |
 |-------|--------|--------|
 | `scripts/probes/probe_thermometer.py` (P-001) | version call, component lookup, thermometer read | PASS 2026-10-17 (in-game-test-log) |
+
+## Signal Bus (`comms`, VERIFIED docs, build fe9a45c)
+
+- `get_component("comms")` is `None` until Signal Bus research. Queue calls (`send`, `receive`, `pending`) and broadcast calls (`broadcast`, `latest`) take channel names of 1-64 characters. Payloads are JSON-safe and at most 1,024 values. Details and statuses: `docs/game/signal-bus.md`.
+- VERIFIED (docs): `pending(channel)` takes nothing; `receive(channel, id)` takes exactly that message or returns `not_found`.
+- VERIFIED (docs): `latest(channel)` returns the value or `None`; it does not consume.
+- Not in game yet: no script of ours has run against the bus. In-game checks: `docs/in-game-test-log.md`, section "Signal Bus".
