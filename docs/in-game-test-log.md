@@ -266,3 +266,16 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        | Pending owner go-ahead for sync. |
+
+## Data Archive persistence (ADR-026, branch feat/data-archive-persistence)
+
+- Needs: Data Archive research (Terraform Index 70,000). Until then `get_component("notebook")` is None and nothing below can be checked.
+- Check 1 (scanner): after one full pass, Computer > Data Archive shows `scanner.map` (192 entries) and `scanner.pass` = 1. No per-row saves.
+- Check 2 (scanner): a second pass gives `scanner.pass` = 2 and a new map.
+- Check 3 (harvester): `harvester.done` appears after the first collect or empty sector, with `"pass"` equal to `scanner.pass`.
+- Check 4 (reload): stop and reload the save mid-trip. The harvester does not revisit sectors already in `harvester.done` for the same pass.
+- Check 5 (pass reset): after the scanner's next pass, `harvester.done` restarts with the new pass number.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Pending Data Archive research and owner go-ahead for sync. |
