@@ -35,7 +35,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      |              |        |       |
+| 2026-10-17 (log 17:58 UTC) | fe9a45c | PASS | Log: `game version: fe9a45c`, `thermometer found: True`, `type_id: thermometer`, `surface temp (C): -63`. Four lines as expected. |
 
 ## Machines
 
@@ -114,4 +114,4 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      |              |        |       |
+| 2026-10-17 (log 17:58 UTC) | fe9a45c | PARTIAL PASS | Log: `power ok` printed once, script running. Deficit and low-battery warnings not yet seen. Status bar text not checked. |
