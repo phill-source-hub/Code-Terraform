@@ -20,6 +20,8 @@ ignore = []
 # Contract and machine scripts run with `self` (the owner) injected by the game. Ruff cannot see it.
 "scripts/contracts/**" = ["F821"]
 "scripts/main/**" = ["F821"]
+# Templates generate scripts/main files, so they carry the same injected `self`.
+"scripts/templates/**" = ["F821"]
 
 [format]
 quote-style = "double"
