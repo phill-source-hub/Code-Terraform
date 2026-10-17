@@ -109,3 +109,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `harvester_1.py` calls `self.get_position()` and `self.get_held()` every pass instead of assuming E13 or tracking moves. A held item is stored first.
 - Why: a new save, or a later game point, need not start at E13. The manual gives both methods, and the held-slot check is its documented first step for a collect loop.
+
+## ADR-020: Scanner follows the harvester; scans the nearest unscanned sector
+
+- Date: 2026-10-17
+- Decision: `scanner_1.py` centres on the harvester's current sector and scans the nearest of the 192 sectors it has not yet scanned in this sweep. Once all are done it waits one world hour and starts again. This widens the scan outward as nearby sectors are cleared, so new items keep appearing.
+- Why: a fixed E13 sweep stops giving the harvester new targets once the nearby items are collected. The harvester only collects scanned items.

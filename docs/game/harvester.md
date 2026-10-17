@@ -25,4 +25,5 @@ Source: owner-supplied in-game DOCS text for `scanner_1` and `harvester_1` (buil
 - Position: the script reads `self.get_position()` every pass (manual: current sector id). It assumes nothing about the start cell, since a new save or later game state may differ.
 - Held item: `self.get_held()` is read every pass; a held item is stored first (manual: empty string when the slot is empty).
 - Hour-long cooling uses `clock.real_seconds_per_hour()`. Sleep units are game seconds (see `docs/api-notes.md`).
-- Scanner re-sweeps every world hour. The manual does not say whether sectors refill.
+- Scanner centre: the scanner reads `get_component("harvester_1").get_position()` as a plain read (manual lists it without a self-only mark). Confirm in game.
+- Scanner rescans the grid every world hour once all 192 sectors are done. The manual does not say whether sectors refill.

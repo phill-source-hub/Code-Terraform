@@ -61,9 +61,9 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 - Script: `scripts/main/scanner_1.py` (replaces the P-001 probe, which passed). Self-contained.
 - Setup: scanner powered; a few sectors around E13 have items.
-- Run: Run Script in Game on `scanner_1`.
-- Expected: console lines `<sector>: <name>` for found items and `<sector>: empty` otherwise, in this order: E13, D13, E12, E14, F13. Then `sweep complete` in the status bar. The sweep repeats each world hour.
-- Pass: five sectors scanned in order; no `ValueError`; statuses other than ok or empty appear as warnings.
+- Run: Run Script in Game on `scanner_1`, with `harvester_1` running.
+- Expected: the scanner scans the nearest unscanned sector to the harvester each pass. First scan is the harvester's own sector. Console lines `<sector>: <name>` or `<sector>: empty`. Status bar `<n> of 192 scanned, centre <sector>`. Scanned sectors keep appearing as the harvester moves.
+- Pass: the scan centre follows the harvester (not fixed at E13); new sectors keep being scanned after the nearby items are collected; no `ValueError`.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
