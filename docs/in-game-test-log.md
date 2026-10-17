@@ -326,3 +326,5 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | 2026-10-17 22:52Z+ | fe9a45c | PASS (no errors) | `scanner_1` (`grid`), `solar_1`, `solar_2`, `solar_3` (`solar_tracker`) restarted by owner. No "Script stopped" lines since. Scanner logs only found items and solar logs nothing, so the log cannot confirm they run; owner reports them running. |
 | — | fe9a45c | PENDING | `harvester_1` (`grid`, `job_queue`, `trip_log`): idle, not yet started. |
 | — | fe9a45c | PENDING | `automation_1` (`base_watch`, `power_status`): not yet checked in log. |
+
+| 2026-10-17 23:02Z | fe9a45c | PASS (imports) | `automation_1` (base_watch) prints `base ok`, no errors. `base_watch` and `power_status` imports work. Heartbeat path NOT yet confirmed: `base ok` also shows when Signal Bus (`comms`) is not researched, which skips heartbeat checks. Recheck after Signal Bus research. |
