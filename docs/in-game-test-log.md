@@ -53,7 +53,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      |              |        |       |
+| 2026-10-17 (log 16:14 UTC) | not shown in log (manual build fe9a45c) | PASS | Log: `correct transmitter.transmit completed with status "correct"`. Contract script status `completed`. Two earlier runs failed on Shared Library import (fixed by ADR-013). Reward and credits not checked yet. |
 
 ## Scripts
 
