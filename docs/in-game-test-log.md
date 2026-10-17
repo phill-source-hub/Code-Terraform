@@ -35,7 +35,25 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      |              |        |       |
+| 2026-10-17 (log 17:58 UTC) | fe9a45c | PASS | Log: `game version: fe9a45c`, `thermometer found: True`, `type_id: thermometer`, `surface temp (C): -63`. Four lines as expected. |
+
+## Machines
+
+### S-001: Solar tracker (`solar_1`)
+
+- Script: `scripts/main/solar_1.py` (self-contained, ADR-014). Rule: tilt = 90 - sun elevation, from `clock.get_elevation()`. Library copy: `scripts/libs/solar_tracker.py` (tested source; not imported by the game).
+- Where it runs: machine `solar_1`, a Solar Generator. Buy one from the Shop (500 cr) and name it `solar_1` if the id differs.
+- Setup state: sun up. Tilt is at 90 (rest) when the script starts.
+- How to run: Run Script in Game on `solar_1`. It samples every 1/60 of a world hour (about 1 world minute).
+- Expected: status bar `tilt <N> deg` (info). `N` = 90 minus the sun's elevation, so it drifts as the sun moves. At night the status shows `tilt 90.0 deg`.
+- Expected behaviour: `get_output()` is near the daytime maximum once the tilt has settled. Tilt is never outside 0-90.
+- Pass criteria: no error status. Output stays near its peak through the day. Stopping the script returns the panel to 90.
+- Open risk: the rule assumes the manual's geometry (tilt complements elevation). If output is low at midday, note the tilt and output values here.
+- Pre-req: sync `solar_tracker` Library is not needed (the script is self-contained). Shared Library research is not needed.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
 
 ## Contracts
 
@@ -84,15 +102,16 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 ### power_monitor (machine `harvester_1`, file `harvester_1.py`)
 
-- Where it runs: machine `harvester_1`. Library `lib/power_status.py` is also copied.
+- Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.
 - How to run: Run Script in Game on `harvester_1`. It keeps running and polls every 5 s of game time.
 - Expected output, healthy grid: console line `power ok`, status bar info `power ok`. Printed once, not every poll.
 - Expected output, deficit: console warning `power deficit: net -<N> W`, status warn with the same text.
 - Expected output, low battery: console warning `low battery: <N>% stored`.
 - Expected behaviour: no machine state changes. Stop script ends the loop.
+- battery_1: status line also shows `| battery_1 <N>%` (status only, not printed). If battery_1 is under 20%, a warning `battery_1 low: <N>%` appears once. If battery_1 does not exist, the status has no battery part.
 - Pass criteria: each state above shows once and changes only when the state changes.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      |              |        |       |
+| 2026-10-17 (log 17:58 UTC) | fe9a45c | PARTIAL PASS | Log: `power ok` printed once, script running. Deficit and low-battery warnings not yet seen. Status bar text not checked. |
