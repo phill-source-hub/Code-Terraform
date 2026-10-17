@@ -5,6 +5,7 @@ from contextlib import suppress
 from pathlib import Path
 from types import SimpleNamespace
 
+from tests.harness.fake_comms import FakeSignalBus
 from tests.harness.fake_game import FakeComponent, FakeGame, run_script
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "main" / "scanner_1.py"
@@ -236,3 +237,41 @@ def test_the_archive_is_looked_up_again_each_pass():
 def test_repeats_after_one_world_hour():
     _, _, game = run_grid(seconds=720.0)
     assert game.clock.now == 720.0
+
+
+class _RecordingBus(FakeSignalBus):
+    """Records how many archive writes had happened when the pass was announced."""
+
+    def __init__(self, saves: list):
+        super().__init__()
+        self.saves = saves
+        self.saves_at_announcement: int | None = None
+
+    def broadcast(self, channel, value):
+        if channel == "scan.ready":
+            self.saves_at_announcement = len(self.saves)
+        return super().broadcast(channel, value)
+
+
+def test_a_finished_pass_is_announced_after_its_map_and_counter_are_saved():
+    saves: list = []
+    bus = _RecordingBus(saves)
+    game = StopOnSleep()
+    game.components["clock"] = FakeComponent(
+        id="clock", type_id="clock", methods={"real_seconds_per_hour": lambda: 3600.0}
+    )
+    game.components["notebook"] = _notebook(saves)
+    game.components["comms"] = bus.as_component()
+    owner = SimpleNamespace(
+        scan=lambda name: SimpleNamespace(status="empty", message="", name=None, value=None)
+    )
+    with suppress(_Stop):
+        run_script(
+            SCRIPT.read_text(encoding="utf-8"),
+            game,
+            filename=str(SCRIPT),
+            extra_globals={"self": owner},
+        )
+    assert bus.saves_at_announcement == 2
+    assert bus.latest("scan.ready") == 1
+    assert bus.latest("status.scanner_1") == {"pass": 1}

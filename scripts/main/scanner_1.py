@@ -10,6 +10,8 @@ Saving: once per complete pass, the map goes to the Data Archive as MAP_KEY, the
     as PASS_KEY (ADR-026). A reader never sees a half-written map, and a new pass number means a
     new map is ready. The Data Archive needs its research. Without it the scanner still scans and
     the harvester still reads the scanner snapshot.
+Announcing (Signal Bus, optional, docs/game/signal-bus.md): after the map is saved, broadcasts
+    `scan.ready` (the pass number) for the harvester and `status.scanner_1` with the same pass.
 Repeat: the full grid is scanned again after one world-clock hour, so the map follows changes.
 Failure: a result status other than ok or empty is shown as a warning, and the scan goes on.
     A failed save is shown as a warning. The scan goes on.
@@ -53,9 +55,17 @@ def save_map(archive, grid_map, pass_number):
         set_status("pass save " + counted.status + ": " + counted.message, "warn")
 
 
+def announce(bus, pass_number):
+    # After the map is saved: a harvester that reads the announcement finds its map ready.
+    if bus is not None:
+        bus.broadcast("scan.ready", pass_number)
+        bus.broadcast("status.scanner_1", {"pass": pass_number})
+
+
 while True:
-    # Looked up each pass: the Data Archive may unlock while this script is running.
+    # Looked up each pass: the Data Archive and Signal Bus may unlock while this script runs.
     notebook = get_component("notebook")
+    comms = get_component("comms")
     pass_number = last_pass(notebook) + 1
     grid_map = {}
     for name, _ in snake_order():
@@ -66,5 +76,6 @@ while True:
         elif result.status != "empty":
             set_status(name + " " + result.status, "warn")
     save_map(notebook, grid_map, pass_number)
+    announce(comms, pass_number)
     set_status("map of " + str(len(grid_map)) + " sectors saved", "info")
     sleep(repeat_seconds)
