@@ -1,0 +1,51 @@
+# Decisions (ADR log)
+
+Short, newest last. Format: date, decision, why.
+
+## ADR-001: Repo layout mirrors the game's scripts folder by role
+
+- Date: 2026-10-17
+- Decision: game-facing code lives under `scripts/`. `scripts/main/` holds per-machine programs, `scripts/libs/` holds shared Libraries, `scripts/probes/` holds probe scripts. `tests/` holds pytest and `tests/harness/`.
+- Why: the game's scripts folder is in AppData, outside this repo. It also gets regenerated files (stubs, workspace, logs) that must not be committed. Keeping our code in `scripts/` lets a later sync step copy only our files into the game.
+
+## ADR-002: The game's scripts folder is not the repo root
+
+- Date: 2026-10-17
+- Decision: the repo does not replace the game folder. Sync to the game folder is a separate, explicit step that needs owner approval before it writes outside the repo.
+- Why: the game folder holds generated files and the save. Pointing git at it would expose saves and logs to the repo.
+
+## ADR-003: Game names map to repo files by role
+
+- Date: 2026-10-17
+- Decision: a machine script `scanner_1` is `scripts/main/scanner_1.py`. A Library `foo` is `scripts/libs/foo.py`, which the game reads as `lib/foo.py`.
+- Why: matches the game's own naming so the game and the repo agree on names.
+
+## ADR-004: Pure logic in plain functions, game calls only in an adapter
+
+- Date: 2026-10-17
+- Decision: each script keeps decisions in pure functions with no game calls. Only a thin adapter touches the game API. Tests exercise the pure functions and the adapter against the fake game in `tests/harness/`.
+- Why: the game only runs inside the game. Pure logic can be tested under CPython; adapters are small enough to check by reading and by the in-game checklist.
+
+## ADR-005: Tests load scripts with exec and injected fakes
+
+- Date: 2026-10-17
+- Decision: `tests/harness/fake_game.py` builds a restricted `__builtins__` dict containing only the names we implement. Scripts are compiled and `exec`ed with that dict. Any other name raises `NameError`.
+- Why: the game's language is not CPython, so we cannot import scripts directly. A restricted builtins dict makes gaps in our API knowledge fail as test errors, not silent passes. It also stops scripts quietly relying on CPython builtins the game may lack.
+
+## ADR-006: `tasks.ps1` instead of `make`
+
+- Date: 2026-10-17
+- Decision: task runner is `tasks.ps1`, run with `pwsh -File tasks.ps1 check`. CI runs the same file.
+- Why: `make` is not installed on the dev machine (Windows 11). One runner avoids drift between local and CI.
+
+## ADR-007: Hook via `.githooks/`, enabled by git config
+
+- Date: 2026-10-17
+- Decision: pre-commit hook lives in `.githooks/pre-commit` and runs `tasks.ps1 check`. Enable once with `git config core.hooksPath .githooks`.
+- Why: no Python-based hook manager needed; one config command, as requested.
+
+## ADR-008: Ruff config lives at the repo root
+
+- Date: 2026-10-17
+- Decision: `ruff.toml` is conservative (line length 100, selected rule groups E F W B UP SIM I). The game's own Ruff is not used because no generated Ruff config was found in the game folder.
+- Why: the game applies a `ruff.toml` only from its scripts folder or above, so the repo config governs repo runs only. Known game-vs-Ruff syntax differences go in api-notes.
