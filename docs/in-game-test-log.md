@@ -116,6 +116,20 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 | 2026-10-17 | fe9a45c | PASS | Owner reports correct. Log: `contract_corrupted_archive: completed`. |
 
+### X-004: Alien Terminal Breach (`terminal_breach`)
+
+- Script: `scripts/contracts/terminal_breach.py`, synced to the game root as `terminal_breach.py`.
+- Briefing (owner-supplied): 15 digits, each 1-5. `guess` returns `.correct` and `.misplaced`.
+- Method: reads only `.correct`. Guess all-`base` once, then change one position at a time. Up to 61 guesses plus one check guess.
+- Expected console: `correct <message>`.
+- Pass criteria: transmit status `correct`. Contract status `completed`.
+- Failure lines: `terminal_breach failed: ...` means nothing was sent. Paste that line.
+- Check in game: `terminal.length` is a property; `.correct` follows the briefing rule with repeated digits (see `docs/game/contracts-terminal-breach.md`).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| - | fe9a45c | NOT RUN | Awaiting owner run. |
+
 ## Scripts
 
 ### power_monitor (machine `harvester_1`, file `harvester_1.py`)
