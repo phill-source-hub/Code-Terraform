@@ -14,6 +14,10 @@ def test_render_leaves_text_without_the_token_unchanged():
     assert render("print('hi')\n", "solar_1") == "print('hi')\n"
 
 
+def test_slot_names_with_digits_in_the_type_are_accepted():
+    assert render("__SLOT__", "o2gen_3") == "o2gen_3"
+
+
 @pytest.mark.parametrize("bad", ["", "solar", "Solar_1", "solar-1", "../solar_1", "solar_1 x"])
 def test_render_refuses_a_name_that_is_not_a_slot_id(bad):
     with pytest.raises(ValueError):
