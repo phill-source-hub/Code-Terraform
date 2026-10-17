@@ -85,3 +85,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `solar_1.py` carries its own copy of the tilt search and imports nothing. The power monitor (`harvester_1.py`) imports `lib/power_status` and must get the same treatment before its L3 run.
 - Why: any `lib/` import needs Shared Library research, which the save lacks. The first machine script that imports from `lib/` will fail the same way the relay contract did.
+
+## ADR-016: Power monitor is self-contained like the other machine scripts
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` carries a copy of the `power_status` rules and imports nothing. `scripts/libs/power_status.py` remains the tested source. Parity tests compare the copy's messages with the library's.
+- Why: its import from `lib/` would fail without Shared Library research, the same blocker that stopped the relay contract.

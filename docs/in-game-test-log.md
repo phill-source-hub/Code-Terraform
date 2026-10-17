@@ -102,7 +102,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 ### power_monitor (machine `harvester_1`, file `harvester_1.py`)
 
-- Where it runs: machine `harvester_1`. Library `lib/power_status.py` is also copied.
+- Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.
 - How to run: Run Script in Game on `harvester_1`. It keeps running and polls every 5 s of game time.
 - Expected output, healthy grid: console line `power ok`, status bar info `power ok`. Printed once, not every poll.
