@@ -50,7 +50,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | `scripts/libs/` | shared Libraries (game `lib/`) |
 | `scripts/templates/` | one template per controller shared by several slots; `tools/render_slots.py` writes `scripts/main/<slot>.py` from it (ADR-027). Edit the template, then run `python tools/render_slots.py` |
 | `scripts/contracts/` | contract scripts (game root) |
-| `scripts/parked/` | scripts not in a machine slot; not synced |
+| `scripts/automations/` | Automations (game: Ship Computer > Automations). Not synced: paste the file into a new Automation in game |
 | `scripts/probes/` | probe scripts that check UNVERIFIED API facts |
 | `tests/` | pytest suite; `tests/harness/` is the fake game API |
 | `docs/` | `api-notes.md`, `decisions.md`, `backlog.md`, `in-game-test-log.md`, `specs/`, `game/` (extracts; `game/manual/` is local only) |
@@ -60,7 +60,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 
 | Name | Purpose | Where it runs | Status |
 |------|---------|---------------|--------|
-| power_monitor (`scripts/parked/power_monitor.py`) | warn on power deficit or low battery; read-only. Parked: needs a free machine slot (ADR-017) | was machine `harvester_1` | L1+L2 pass, L3 partial |
+| base_watch (Automation, `scripts/automations/base_watch.py`) | Warn on power deficit, low battery, and silent or missing machine heartbeats; broadcasts `base.alerts`. Replaces the parked power monitor (ADR-029) | Automation, no machine slot | Unit tests only; in-game checklist pending |
 | scanner_1 | Snake-scan all 192 sectors, save map to Data Archive (once researched), repeat hourly; imports `grid` | machine `scanner_1` | L1+L2 pass, L3 pending |
 | harvester_1 | Plan heat-cheapest trips to scanned items, collect and store; imports `grid` | machine `harvester_1` | L1+L2 pass, L3 pending |
 | grid (Library) | Sector names, snake order, heat route search for scanner and harvester | `scripts/libs/grid.py` (game `lib/grid.py`) | Unit tests only; L3 pending |
@@ -78,6 +78,16 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | probe_thermometer (`scripts/probes/`) | P-001 probe: version, component lookup, thermometer read | Run Script in Game, one-off | Done (P-001 PASS) |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
+
+### Installing an Automation
+
+`tools/sync_to_game.py` copies only `scripts/main/` and `scripts/libs/`. To run `scripts/automations/*.py`:
+
+1. In game, open Ship Computer > Automations and click **+ New Automation**.
+2. Paste the file's contents into its editor and save.
+3. Needs Automations research. base_watch also needs Signal Bus research for heartbeats and alerts (it still reports power without it).
+
+Where the game stores automation files on disk is UNVERIFIED, so this stays a manual paste until it is checked.
 
 ## Limits
 

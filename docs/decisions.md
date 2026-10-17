@@ -182,3 +182,11 @@ Short, newest last. Format: date, decision, why.
 - Decision: the harvester takes a sector from `jobs.collect` only when that sector is reachable this pass, using pending + receive by id. The scanner announces each finished pass on `scan.ready` after its map is saved. Both scripts broadcast a heartbeat (`status.<slot>`). No script uses `wait`, `wait_any` or `wait_broadcast`.
 - Why: a blocking wait stops the planner, and the scanner and harvester must keep moving or scanning. A job that is not reachable is left in the queue for later, so the rule never drops work. The announcement lets the harvester reset its log without the Data Archive, which needs separate research.
 - Status: repo side done. Game behaviour is UNVERIFIED until the Signal Bus checklist (`docs/in-game-test-log.md`) passes. Scripts run unchanged when Signal Bus research is missing.
+
+## ADR-029: Base-wide monitoring is an Automation; the parked power monitor is retired
+
+- Date: 2026-10-17
+- Decision: `scripts/automations/base_watch.py` replaces `scripts/parked/power_monitor.py`. It reads all grids through `power_control.grids()` and watches each deployed machine's heartbeat (ADR-028). It broadcasts `base.alerts` when the list changes. The parked script and its tests are removed. `power_status` stays as the tested rule library.
+- Why: ADR-017 parked the monitor because it needed a machine slot. An Automation has no slot, and a brownout never pauses it (manual, Automations). One watcher for the base beats one per machine.
+- Supersedes: ADR-017 (parked monitor), and the ADR-016 copy of its rules.
+- Status: repo side done. Install is a manual paste (sync does not copy automations; game storage path UNVERIFIED). In-game checklist: `docs/in-game-test-log.md`, section "base_watch".

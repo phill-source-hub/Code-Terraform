@@ -238,9 +238,9 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ## Scripts
 
-### power_monitor (PARKED in `scripts/parked/power_monitor.py`; was machine `harvester_1`)
+### power_monitor (SUPERSEDED by the base_watch Automation, ADR-029; was machine `harvester_1`)
 
-- Status: parked on 2026-10-17 (ADR-017). Needs a free machine slot to run again. The results below stand for the monitor's last run.
+- Status: removed from the repo on `feat/base-watch-automation` (ADR-029). The check below is the last run of the old monitor; base_watch has its own checklist (section "base_watch").
 
 - Where it runs: machine `harvester_1`. Self-contained (ADR-014): no library import, so no Shared Library research is needed. Version of 2026-10-17 supersedes the earlier `lib/power_status.py` import.
 - Setup state: at least one powered grid. A deficit needs a consumer that draws more than generation (for example, unplug or power down a generator, or add load). Low battery needs a battery under 20 % charge.
@@ -285,9 +285,22 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 - Needs: Signal Bus research. Until then `get_component("comms")` is None and scripts skip all bus calls.
 - Check 1 (announce): after one scanner pass, `scan.ready` = 1 and `status.scanner_1` = `{"pass": 1}` in Computer > Signal Bus (Broadcasts).
 - Check 2 (heartbeat): `status.harvester_1` shows `{"heat": N}` and changes as heat changes.
-- Check 3 (job): from Computer > Signal Bus, send a queue message `{"..."}` ... on `jobs.collect` with a scanned sector name as a plain string (e.g. `E15`). The harvester moves toward it when it is reachable this pass, then the message is gone from the queue.
+- Check 3 (job): from Computer > Signal Bus, queue the plain text `E15` on `jobs.collect` (a scanned sector). The harvester moves toward it when it is reachable this pass, and the message is gone from the queue once taken.
 - Check 4 (unreachable job): send `H24` while H24 is not scanned. The message stays queued and the harvester collects its own pick.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        | Pending Signal Bus research and owner go-ahead for sync. |
+
+## base_watch (Automation, ADR-029, branch feat/base-watch-automation)
+
+- Install: paste `scripts/automations/base_watch.py` into a new Automation (Ship Computer > Automations > + New Automation). Needs Automations research.
+- Check 1 (healthy): status bar shows `base ok`; console prints `base ok` once.
+- Check 2 (deficit): take a grid into deficit (for example switch off a generator with load on). Console prints `warning: power deficit: net <N> W` once; the status turns to a warning.
+- Check 3 (heartbeat): with harvester_1 deployed, stop its script for over 60 game seconds. Console prints `warning: harvester_1: silent for <N> s` once. Restart it, and the line clears to `base ok`.
+- Check 4 (bus): Computer > Signal Bus > Broadcasts shows `base.alerts` matching the console alert list.
+- Check 5 (imports, UNVERIFIED for automations): the script imports `base_watch` and `power_status` from `lib/`. If the log shows `ImportError` or `ModuleNotFoundError`, Libraries do not work from an Automation; inline the rules or report it.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Pending owner paste and Automations research. Check 5 is the first open question. |
