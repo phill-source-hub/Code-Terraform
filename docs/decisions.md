@@ -167,3 +167,11 @@ Short, newest last. Format: date, decision, why.
 - Supersedes: the per-row save part of ADR-021. ADR-021's once-per-pass scan and archive target stay.
 - Trade-off: a stop part-way through a pass keeps the previous complete map instead of the partial one. The harvester plans from a complete (if older) map, not a partial one.
 - Status: repo side done. Needs Data Archive research to run; without it the log is kept only for this run. In-game check in `docs/in-game-test-log.md`.
+
+## ADR-027: Shared controllers are one template; slot files are generated
+
+- Date: 2026-10-17
+- Decision: each controller shared by several slots (solar, pressure) has one template in `scripts/templates/` with a `__SLOT__` token. `tools/render_slots.py` writes `scripts/main/<slot>.py` from it. `tests/test_render_slots.py` fails when a committed slot file no longer matches its template. The copy-parity tests are removed.
+- Why: the game needs one file per slot, but the two copies were kept equal only by a text-replace test. A generator makes the template the single source, and the drift test makes a hand edit visible.
+- Supersedes: the duplicate-file rule of ADR-014 for these controllers.
+- Status: repo side done. Slot files unchanged in content. Sync is unchanged (it still copies `scripts/main/`).

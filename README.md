@@ -48,6 +48,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 |------|----------|
 | `scripts/main/` | per-machine programs (file name = machine id) |
 | `scripts/libs/` | shared Libraries (game `lib/`) |
+| `scripts/templates/` | one template per controller shared by several slots; `tools/render_slots.py` writes `scripts/main/<slot>.py` from it (ADR-027). Edit the template, then run `python tools/render_slots.py` |
 | `scripts/contracts/` | contract scripts (game root) |
 | `scripts/parked/` | scripts not in a machine slot; not synced |
 | `scripts/probes/` | probe scripts that check UNVERIFIED API facts |
