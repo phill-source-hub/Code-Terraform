@@ -24,5 +24,7 @@ Source: owner-supplied in-game DOCS text for `scanner_1` and `harvester_1` (buil
 
 - Position: the script reads `self.get_position()` every pass (manual: current sector id). It assumes nothing about the start cell, since a new save or later game state may differ.
 - Held item: `self.get_held()` is read every pass; a held item is stored first (manual: empty string when the slot is empty).
+- No battery on the harvester (owner correction, 2026-10-17). Heat is the only budget.
+- Collecting an item sector adds no heat (the manual states only the empty-sector cost).
 - Hour-long cooling uses `clock.real_seconds_per_hour()`. Sleep units are game seconds (see `docs/api-notes.md`).
 - Scanner does one snake pass over all 192 sectors and saves the result to the Data Archive key `scanner.map` (superseded the harvester-centred scan, ADR-021). It repeats each world hour. The manual does not say whether sectors refill.

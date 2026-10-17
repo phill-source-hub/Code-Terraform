@@ -161,6 +161,23 @@ def test_full_inventory_warns_and_keeps_item_held():
     assert game.statuses[-1] == ("store inventory_full", "warn")
 
 
+def test_trip_that_would_overheat_cools_first():
+    # Heat 75 plus a path of 8 (one empty cell at 7, then the item at 1) reaches 83: too hot.
+    owner, record = harvester(heat=75)
+    owner.move = lambda sector: record.append(sector) or SimpleNamespace(status="ok", message="")
+    game = run(owner, {"E15": ok_item()})
+    assert record == []
+    assert game.statuses[-1] == ("cooling before the next trip", "warn")
+
+
+def test_prefers_the_item_with_the_lowest_path_heat_over_the_nearest():
+    # D13 is adjacent and an item (heat 1). E15 is two steps away through an empty cell (heat 8).
+    owner, record = harvester()
+    owner.move = lambda sector: record.append(sector) or _stop_now()
+    run(owner, {"E15": ok_item(), "D13": ok_item()})
+    assert record == ["D13"]
+
+
 def test_machine_script_has_no_imports():
     for line in SCRIPT.read_text(encoding="utf-8").splitlines():
         assert not line.strip().startswith(("import ", "from ")), line

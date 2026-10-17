@@ -121,3 +121,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `scanner_1.py` runs a snake pass over all 192 sectors from base, saves the results to the Data Archive as `scanner.map` (status, name, value per sector) at the end of each row, and repeats each world hour. The scanner does not move, so the scan costs no harvester heat.
 - Why: the scanner's self.scan is a base-side action (manual: scanner_1). A full map lets the harvester plan routes by heat and battery, which a nearest-first scan cannot do. ADR-020 is superseded.
+
+## ADR-022: Harvester plans trips by heat, not distance
+
+- Date: 2026-10-17
+- Decision: `harvester_1.py` runs a shortest-path search over the 8x24 grid each pass. Entering an item sector costs 1 heat, anything else 7. Items are ranked by (path heat, steps). A trip is taken only if heat stays under HOT_HEAT. Otherwise the harvester cools first. There is no battery model: the owner confirmed the harvester has no battery.
+- Why: heat is the only harvester budget in the manual, and the scanner map gives the item locations. Ranking by heat avoids empty cells where a detour through items is possible.
