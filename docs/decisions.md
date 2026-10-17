@@ -79,3 +79,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `scripts/contracts/relay_hack.py` has no imports. It carries a copy of the solver from `scripts/libs/relay_hack.py`. Tests check the copy gives the right code on the same inputs.
 - Why: the game raised `RuntimeError: Shared Library not yet researched` on any import from `lib/`. Contract scripts cannot wait for that research. Revisit when Shared Library is unlocked and move contract scripts back to imports.
+
+## ADR-015: Biology scripts are self-contained; one sample per specimen
+
+- Date: 2026-10-17
+- Decision: each Bio script imports nothing (ADR-014). The Lab discards a specimen after a successful extract, treating each specimen as one sample. This is an assumption; the manual does not say a specimen is used up.
+- Why: lib imports are blocked until Shared Library research. Discarding after extract frees the chamber, so the collector can refill it. Keeping the specimen would extract repeatedly and spend reagents with no stop condition.
