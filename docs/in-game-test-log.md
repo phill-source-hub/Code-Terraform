@@ -73,6 +73,21 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | 2026-10-17 (log 18:59 UTC) | fe9a45c | PARTIAL PASS | Log: `dumped waste at 50, penalty 0` twice (18:57, 18:59 UTC). No warnings or errors. Intake and efficiency not yet checked. |
 | 2026-10-17 (panel) | fe9a45c | PASS | Intake 5000 ppt (status 4999.99) against CO2 about 50,000 ppt: CO2/10. Efficiency 100%, penalty 0, output 0.240 ppt/day (Mk I peak). Waste 34.4 and rising toward the next clean dump at 50. |
 
+## Atmosphere (pressure)
+
+### PG-001: Pressure generators (`pressure_1`, `pressure_2`, Mk I)
+
+- Scripts: `scripts/main/pressure_1.py` and `pressure_2.py` (same program; test keeps them identical). Applied 2026-10-17, replacing the `Help me` requests.
+- Setup: both powered (-7 W each). Script running on each.
+- Run: Run Script in Game on each generator. The loop runs continually.
+- Expected: status `gauge <g> window <low>-<high> efficiency <e>%`, updated when it changes. Efficiency climbs toward 100% after several sweeps. Console `warning: sync <status>` only if a sync is refused.
+- Pass: efficiency rises and holds near 100%. Each sweep gets one sync inside its window. No refused syncs.
+- Fail signs: efficiency stuck at 0% across sweeps, or falling. Paste the status line with the window values.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)
