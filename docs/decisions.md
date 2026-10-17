@@ -150,3 +150,11 @@ Short, newest last. Format: date, decision, why.
 - Decision: loops that poll state (o2gen_1) sleep one second per pass, as CLAUDE.md asks. pressure_1 and pressure_2 keep running with no sleep. The sync window of a pressure sweep is not measured yet, so a pause could miss it. Revisit once the sweep rate and window length are read in game.
 - Why: a sleep between reads could skip the only moment a window is open. Writing the window timing down here keeps the exception visible instead of silently breaking the rule.
 - Status: open. In-game timing check to be logged in `docs/in-game-test-log.md`.
+
+## ADR-025: Scripts import Libraries; the copy-and-parity rule is retired
+
+- Date: 2026-10-17
+- Decision: machine and contract scripts import from `scripts/libs/` (game `lib/`) by bare name. Shared logic lives in one Library: `solar_tracker`, `relay_hack`, `power_status` and the new `grid`. The copies in scripts, their parity tests, and the "no imports" tests are removed. `tests/test_script_imports.py` checks every import resolves to a Library file or to `heapq`, and that Libraries never use `self` or `panel`.
+- Why: Shared Library is researched, so the blocker in ADR-013 and ADR-014 is gone. A copy with a parity test is a second source that can drift, and the test only checks the copy, not the game's import.
+- Supersedes: ADR-013 and ADR-014 (import rule). ADR-016 is superseded for `power_status` when the parked monitor is replaced (see backlog).
+- Status: repo side done. The game-side import is UNVERIFIED until the in-game checklist (Library imports, `docs/in-game-test-log.md`) passes after the owner's sync go-ahead.

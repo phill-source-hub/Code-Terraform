@@ -142,28 +142,6 @@ def test_refused_move_drops_target_and_warns():
     assert game.statuses[-1] == ("move too_far to E14", "warn")
 
 
-def _planner_namespace():
-    """Run only the harvester's definitions (everything above the main loop) and return them."""
-    head = SCRIPT.read_text(encoding="utf-8").split("scanner = get_component")[0]
-    return run_script(head, FakeGame(), filename=str(SCRIPT))
-
-
-def test_route_search_reaches_the_neighbouring_item_in_one_step():
-    # E13 is (4, 12); E14 is the cell to its right, an item, so the route costs 1 heat, 1 step.
-    planner = _planner_namespace()["plan_routes"]
-    best, first = planner((4, 12), ["E14"])
-    assert best[(4, 13)] == (1, 1)
-    assert first[(4, 13)] == (4, 13)
-
-
-def test_route_search_crosses_items_at_one_heat_each_and_empty_cells_at_seven():
-    # E13 -> E14 -> E15 are items (1 heat each); stepping on E16, which is empty, costs 7.
-    planner = _planner_namespace()["plan_routes"]
-    best, _ = planner((4, 12), ["E14", "E15"])
-    assert best[(4, 14)] == (2, 2)
-    assert best[(4, 15)] == (9, 3)
-
-
 def test_no_items_reports_status_and_waits():
     owner, record = harvester()
     game = run(owner, {})
@@ -205,12 +183,3 @@ def test_stored_line_reports_the_heat_after_the_trip():
     owner.get_heat = lambda: 42.0
     game = run(owner, {"E13": ok_item()})
     assert game.printed == ["stored soil_sample from E13 heat 42.0\n"]
-
-
-def test_machine_script_imports_only_the_builtin_heapq():
-    imports = [
-        line.strip()
-        for line in SCRIPT.read_text(encoding="utf-8").splitlines()
-        if line.strip().startswith(("import ", "from "))
-    ]
-    assert imports == ["import heapq"]

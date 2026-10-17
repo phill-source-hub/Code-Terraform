@@ -1,7 +1,7 @@
 """Scanner: snake-scan the whole grid, save the results as a map, and repeat each world hour.
 
 Where it runs: machine script slot `scanner_1` (self = this scanner).
-Self-contained on purpose (ADR-014): no imports.
+Imports the shared `grid` Library for sector names and snake order (ADR-025).
 Grid (manual, scanner_1): rows A-H map to 0-7, columns 1-24 map to 0-23. Base is E13.
     The scanner does not move. Scanning every sector from here costs no harvester heat or power.
 Method: a snake (boustrophedon) pass. Row A runs left to right, row B right to left, and so on.
@@ -18,24 +18,9 @@ API facts relied on (docs/game/harvester.md and manual Data Archive): self.scan(
     ("clock").real_seconds_per_hour(); set_status, print, sleep.
 """
 
-ROWS = 8
-COLS = 24
+from grid import snake_order
+
 MAP_KEY = "scanner.map"
-
-
-def sector_id(row, col):
-    return chr(65 + row) + str(col + 1)
-
-
-def snake_order():
-    """(sector id, last sector of its row) in snake order."""
-    order = []
-    for row in range(ROWS):
-        cols = list(range(COLS)) if row % 2 == 0 else list(range(COLS - 1, -1, -1))
-        for index, col in enumerate(cols):
-            order.append((sector_id(row, col), index == len(cols) - 1))
-    return order
-
 
 notebook = get_component("notebook")
 clock = get_component("clock")

@@ -2,7 +2,7 @@
 
 Where it runs: machine script slot `harvester_1` (self = this harvester). The harvester has no
     battery to manage; heat is its only budget (manual, Harvester: no battery is listed).
-Imports only the documented built-in `heapq` (route search queue, manual Built-in modules).
+Imports the shared `grid` Library for sector names and the heat route search (ADR-025).
 Position and held item: read from the game every pass (get_position, get_held). Nothing is
     assumed about the start cell.
 Heat model (manual, Harvester): stepping onto an item sector +1; onto an empty sector +7;
@@ -25,50 +25,10 @@ API facts relied on (docs/game/harvester.md): self.get_position, self.get_held, 
     get_component("clock"), set_status, print, sleep.
 """
 
-import heapq
+from grid import parse_sector, plan_routes, sector_id
 
 HOT_HEAT = 80
 SHORT_SECONDS = 5
-ROWS = 8
-COLS = 24
-ITEM_STEP_HEAT = 1
-EMPTY_STEP_HEAT = 7
-
-
-def sector_id(row, col):
-    return chr(65 + row) + str(col + 1)
-
-
-def parse_sector(name):
-    return ord(name[0]) - 65, int(name[1:]) - 1
-
-
-def plan_routes(start, items):
-    """Cheapest (heat, steps) to every cell from start, and the first step toward each.
-
-    Shortest path with a lexicographic cost, so equal heat prefers fewer steps. Grid is 8x24.
-    """
-    best = {start: (0, 0)}
-    first = {start: None}
-    frontier = [(0, 0, start)]
-    while frontier:
-        heat, steps, cell = heapq.heappop(frontier)
-        # Stale entry: a cheaper route to this cell was pushed after this one.
-        if (heat, steps) != best[cell]:
-            continue
-        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            nr = cell[0] + dr
-            nc = cell[1] + dc
-            if nr < 0 or nr >= ROWS or nc < 0 or nc >= COLS:
-                continue
-            neighbour = (nr, nc)
-            name = sector_id(nr, nc)
-            cost = (heat + (ITEM_STEP_HEAT if name in items else EMPTY_STEP_HEAT), steps + 1)
-            if neighbour not in best or cost < best[neighbour]:
-                best[neighbour] = cost
-                first[neighbour] = neighbour if cell == start else first[cell]
-                heapq.heappush(frontier, (cost[0], cost[1], neighbour))
-    return best, first
 
 
 scanner = get_component("scanner_1")

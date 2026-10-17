@@ -109,8 +109,3 @@ def test_missing_clock_reports_error_and_exits(monkeypatch):
         extra_globals={"self": panel},
     )
     assert game.statuses == [("clock not found", "error")]
-
-
-def test_machine_script_has_no_imports():
-    for line in SCRIPT.read_text(encoding="utf-8").splitlines():
-        assert not line.strip().startswith(("import ", "from ")), line

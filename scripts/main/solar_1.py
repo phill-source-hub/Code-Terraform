@@ -1,8 +1,7 @@
 """Solar tracker: keep the panel facing the sun. Writes tilt.
 
 Where it runs: machine script slot `solar_1` (Solar Generator, component id solar_1).
-Self-contained on purpose: no imports (ADR-013, ADR-014). The rule is a copy of
-    scripts/libs/solar_tracker.py. Tests check the copy gives the same tilt.
+Imports the shared `solar_tracker` Library for the tilt rule (ADR-025).
 Rule: tilt = 90 - sun elevation (clamped 0-90). Night (elevation 0) rests at 90.
 Timing: runs forever (the loop is what keeps the panel tracking). Samples every 1/60 of a
     world-clock hour, about 1 world minute, so the sun moves about 0.25 degrees between samples.
@@ -12,18 +11,9 @@ Failure: a missing clock or a rejected tilt write shows as an error in the statu
     loop keeps going. The panel resets to 90 when this script stops, so stopping is safe.
 """
 
-TILT_MIN = 0.0
-TILT_MAX = 90.0
+from solar_tracker import target_tilt
+
 SAMPLES_PER_WORLD_HOUR = 60
-
-
-def clamp_tilt(tilt):
-    return min(max(tilt, TILT_MIN), TILT_MAX)
-
-
-def target_tilt(elevation):
-    return clamp_tilt(TILT_MAX - elevation)
-
 
 clock = get_component("clock")
 if clock is None:
