@@ -37,6 +37,49 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 |      |              |        |       |
 
+## Biology (Bio Collector, Bio Lab, Bio Exchange)
+
+Prerequisites before any run: each machine powered; Auto Feeders researched (scripted transfers); reagents bought from the Shop Biology category and in home Inventory; Lab and Exchange at Nocturna Base.
+
+### B-001: Bio Collector (`bio_collector_1`)
+
+- Script: `scripts/main/bio_collector_1.py` (applied 2026-10-17, replacing the `Help me` request).
+- Setup: collector powered; Bio Lab at the same outpost; some fragments not yet cataloged.
+- Run: Run Script in Game on `bio_collector_1`.
+- Expected: status `collecting <distance> away` (info). Then a specimen in the collector cargo. Cargo is not collected again until the Lab takes it.
+- Pass: exactly one collect per specimen; no `cargo_occupied` error; nearest uncataloged fragment is chosen first.
+- Fail signs: `collect cargo_occupied` or `collect busy` repeating (paste the status).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### B-002: Bio Lab (`bio_lab_1`)
+
+- Script: `scripts/main/bio_lab_1.py`.
+- Setup: B-001 passed (specimen in collector cargo). Reagents for the specimen's recipe in home Inventory. Auto Feeders researched.
+- Run: Run Script in Game on `bio_lab_1`.
+- Expected status sequence: `sample shipped` (info) once per specimen. Before that, possibly `stock <reagent>: <status>` if reagents are missing (warn, paste it).
+- Pass: the chamber takes the specimen, analyzes it, loads reagents from Inventory, extracts one sample, the sample reaches Inventory, and the chamber is empty again.
+- ASSUMPTION to check: one sample per specimen. If the lab extracts again from the same specimen before discarding, or the discard fails, note it here.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### B-003: Bio Exchange (`bio_exchange_1`)
+
+- Script: `scripts/main/bio_exchange_1.py`.
+- Setup: B-002 has produced samples in Inventory. Nocturna Base only. At least one Bio Order not complete.
+- Run: Run Script in Game on `bio_exchange_1`.
+- Expected: `waiting for samples` (info) when none match; a delivery per matching sample; `order complete` (info) when the order is filled.
+- Pass: the first open order is assigned; matching samples are taken from Inventory and delivered; the order reaches `complete` and the reward is paid.
+- Fail signs: `take <status>` or `deliver <status>` (warn), paste the status.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)
