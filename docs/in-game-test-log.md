@@ -53,7 +53,19 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-| 2026-10-17 (log 16:14 UTC) | not shown in log (manual build fe9a45c) | PASS | Log: `correct transmitter.transmit completed with status "correct"`. Contract script status `completed`. Two earlier runs failed on Shared Library import (fixed by ADR-013). Reward and credits not checked yet. |
+| 2026-10-17 (log 16:14 UTC) | fe9a45c | PASS | Log: `correct transmitter.transmit completed with status "correct"`. Contract script status `completed`. Two earlier runs failed on Shared Library import (fixed by ADR-013). Reward and credits not checked yet. |
+
+### X-001: Xenogenetics Survey (`xenogenetics`)
+
+- Script: `scripts/contracts/xenogenetics.py`, synced to the game root as `xenogenetics.py` (applied 2026-10-17, replacing the `Help me` request).
+- Briefing (owner-supplied): send every one of the 1000 samples not in the 50-sequence Earth reference, as a list.
+- Expected console: `<N> alien samples sent: correct <message>`. `N` is the number of samples not in the reference.
+- Pass criteria: transmit status `correct`. Contract status `completed`.
+- Open assumption: duplicates among alien samples are kept. If Earth rejects the answer as `incorrect`, check deduplication first and note it here.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
 
 ## Scripts
 
