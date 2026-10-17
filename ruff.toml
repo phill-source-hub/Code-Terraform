@@ -22,6 +22,9 @@ ignore = []
 "scripts/main/**" = ["F821"]
 # Templates generate scripts/main files, so they carry the same injected `self`.
 "scripts/templates/**" = ["F821"]
+# Owner-written game scripts, copied verbatim (not ours to edit). Same injected names as above.
+"scripts/owner/**" = ["F821"]
+"scripts/automations/**" = ["F821"]
 
 [format]
 quote-style = "double"
