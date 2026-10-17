@@ -6,7 +6,7 @@ Scripts for the game **Code: Terraform** (Steam 868160, by AppsMafia). The game 
 
 1. In the game: Settings > Editor > External Editor > **Set Up VS Code** (or PyCharm / Zed, see the game's `CODE-TERRAFORM-IDE.txt`).
 2. The game keeps its own scripts folder at `%APPDATA%\io.codeterraform.game\save_mvcjaxut_26ndfi_scripts` (this save). That folder holds generated files, saves and logs. It is **not** this repo.
-3. Scripts in this repo are copied into that folder by a sync step. The sync step is not written yet and needs your approval before it touches the game folder.
+3. Scripts in this repo are copied into that folder by `tools/sync_to_game.py`. Each `apply` needs your go-ahead (ADR-009, ADR-011).
 
 ## Set up this repo
 
@@ -23,14 +23,14 @@ git config core.hooksPath .githooks   # enables the pre-commit check, once per c
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tasks.ps1 sync     # dry run: shows what would be copied
 powershell -NoProfile -ExecutionPolicy Bypass -File tasks.ps1 status   # read-only: game warnings, errors, script status
-python tools/sync_to_game.py apply                                      # writes to the game folder (not run yet)
+python tools/sync_to_game.py apply                                      # writes to the game folder (your go-ahead each run)
 ```
 
-`apply` writes only our files. It never overwrites a game file that changed since our last sync (see ADR-009). Game files it refuses are listed; resolve them by hand. Do not run `apply` until the in-game tutorial is complete (ADR-011).
+`apply` writes only our files. It never overwrites a game file that changed since our last sync (see ADR-009). Game files it refuses are listed; resolve them by hand. The in-game tutorial is complete (ADR-011, lifted 2026-10-17).
 
 ## Game reference
 
-Extracts from the in-game DOCS manual (build `fe9a45c`) are in [docs/game/](docs/game/README.md).
+Extracts from the in-game DOCS manual (build `fe9a45c`) are in [docs/game/](docs/game/README.md). The full manual is a local, git-ignored copy in `docs/game/manual/` (ADR-023).
 
 ## Run the checks
 
@@ -48,30 +48,32 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 |------|----------|
 | `scripts/main/` | per-machine programs (file name = machine id) |
 | `scripts/libs/` | shared Libraries (game `lib/`) |
+| `scripts/contracts/` | contract scripts (game root) |
+| `scripts/parked/` | scripts not in a machine slot; not synced |
 | `scripts/probes/` | probe scripts that check UNVERIFIED API facts |
 | `tests/` | pytest suite; `tests/harness/` is the fake game API |
-| `docs/` | `api-notes.md`, `decisions.md`, `in-game-test-log.md` |
+| `docs/` | `api-notes.md`, `decisions.md`, `backlog.md`, `in-game-test-log.md`, `specs/`, `game/` (extracts; `game/manual/` is local only) |
 | `.claude/agents/` | Claude Code subagents used for this project |
 
 ## Script index
 
 | Name | Purpose | Where it runs | Status |
 |------|---------|---------------|--------|
-| power_monitor (`harvester_1.py`) | warn on power deficit or low battery; read-only | machine `harvester_1` (placed on a free slot, not a harvester job) | L1+L2 pass, L3 pending |
-| scanner_1 | Sweep the 3x3 around base, print what is there | machine `scanner_1` | L1+L2 pass, L3 pending |
-| harvester_1 | Collect nearest scanned item, store in Inventory | machine `harvester_1` | L1+L2 pass, L3 pending |
+| power_monitor (`scripts/parked/power_monitor.py`) | warn on power deficit or low battery; read-only. Parked: needs a free machine slot (ADR-017) | was machine `harvester_1` | L1+L2 pass, L3 partial |
+| scanner_1 | Snake-scan all 192 sectors, save map to Data Archive (once researched), repeat hourly | machine `scanner_1` | L1+L2 pass, L3 pending |
+| harvester_1 | Plan heat-cheapest trips to scanned items, collect and store | machine `harvester_1` | L1+L2 pass, L3 pending |
 | bio_collector_1 | Explore nearest uncataloged fragment, else one the order needs | machine `bio_collector_1` | L1+L2 pass, L3 pending |
 | bio_lab_1 | Analyze specimen, stage reagents from Inventory, extract, ship sample | machine `bio_lab_1` (home base) | L1+L2 pass, L3 pending |
 | bio_exchange_1 | Fill Bio Order from Inventory samples (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
-| o2gen_1 | Set intake to CO2/10, dump waste at 50 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
+| o2gen_1 | Intake CO2/10, dump waste only in 50-60, last resort at 90 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
-| solar_tracker (`solar_1.py`) | Tilt = 90 - sun elevation, self-contained | machine `solar_1` (Solar Generator) | L1+L2 pass, L3 pending |
+| solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; copies are self-contained until B-002 | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001) |
 | relay_hack (contract) | Orbital Relay Hack solver, self-contained | contract `relay_hack` | Done (C-001 PASS) |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
 | terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |
 | data_tablet (contract) | Read distance-0 probe cells of a 30x30 tablet, transmit the message | contract `data_tablet` | Done (X-003 PASS) |
-| probe_thermometer (`scanner_1.py`) | P-001 probe: version, component lookup, thermometer read | machine `scanner_1` (one-off) | L3 pending |
+| probe_thermometer (`scripts/probes/`) | P-001 probe: version, component lookup, thermometer read | Run Script in Game, one-off | Done (P-001 PASS) |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
 

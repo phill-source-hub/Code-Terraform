@@ -46,13 +46,13 @@ The language is Python-like. Do not assume CPython. Names the game does not list
 - Build a reconciliation loop: read the machine state, decide the missing step, attempt once, check `.status`, wait after transient blockers, repeat.
 - Do not depend on a local variable to remember machine contents. Re-read.
 - Before a write (transfer, buy, queue), inspect what is already there and calculate the missing amount.
-- Persistent knowledge across stops or loads: use the **Data Archive** (see manual, "Data Archive"). Not yet extracted.
+- Persistent knowledge across stops or loads: use the **Data Archive** (see manual, "Data Archive"). Summary in `docs/api-notes.md`.
 
 ## Variables and operators
 
 - `x = 10`, `name = "oxygen"`, `active = True`. Standard.
 - Assignment is `=`; equality is `==`. Standard.
-- Membership and `None` checks: standard forms. Detail in manual "Operators" (not extracted in full).
+- Membership and `None` checks: standard forms. Detail in manual "Operators" (see manual, Operators).
 
 ## Exceptions
 
@@ -74,7 +74,7 @@ The language is Python-like. Do not assume CPython. Names the game does not list
 - `set_status(message, level)` for the script run. Message ≤240 chars, no nulls. Level `info`, `warn`, `error`.
 - `notify(...)` for toasts. Use sparingly. See `api-notes.md` for duration rules.
 
-## Not yet extracted from the manual
+## Not yet extracted (use the manual)
 
 - Operators in detail, Numbers, Conversion functions, Strings and f-strings, Regular expressions (module `re`), Lists/tuples/dicts, Match/case, Functions, Generators, Caching, Classes and dataclasses, Enums, Decorators, `@property`, Built-in function list, stdlib module references (`random`, `functools`, `re`, `dataclasses`, `enum`, `json`, `heapq`, `traceback`, `math`, `itertools`, `operator`, `string`, `collections`), Code Editor, Debug mode.
 - These are needed as scripts use them. Add a file per area when needed.

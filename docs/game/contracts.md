@@ -1,6 +1,6 @@
 # Contracts and Transmitter
 
-Source: in-game DOCS manual, build `fe9a45c`. Sections: "Contracts" (guide and reference), "Transmitter", types `Contract`, `ContractScript`, and the 15 contract subtypes (not extracted yet; see below). Tag: **VERIFIED (docs)**.
+Source: in-game DOCS manual, build `fe9a45c`. Sections: "Contracts" (guide and reference), "Transmitter", types `Contract`, `ContractScript`, and the 15 contract subtypes (subtype APIs: see the manual's Contracts section). Tag: **VERIFIED (docs)**.
 
 ## What a contract is
 
@@ -36,7 +36,7 @@ transmitter.transmit(c.id, answer)
 | `.reward` | int | Credits on completion. |
 | `.status` | str | `available` or `completed`. |
 
-Each subtype (for example `LatticeContract`, `RelayHackContract`) adds its own API. **Not extracted yet.** Before writing a contract script, pull that subtype's entry from the manual into `docs/game/contracts-<name>.md`.
+Each subtype (for example `LatticeContract`, `RelayHackContract`) adds its own API. Before writing a contract script, read that subtype's section in `docs/game/manual/` and add `docs/game/contracts-<name>.md` if it needs notes.
 
 `ContractScript` (`self`, in contract scripts): `.name`, `.contract`.
 
@@ -91,6 +91,6 @@ Shop `sell` returns `SaleResult` with `.status` (`ok`, `not_sellable`, `no_stock
 
 ## Open questions
 
-- Per-contract APIs for all 15 subtypes: not extracted. Needed before any contract script.
+- Per-contract APIs for all 15 subtypes: in the manual; extract per script as needed.
 - Whether a `transmit` on `correct` returns a payload with the reward: check in game.
-- Shop `buy` status list: not extracted yet.
+- Shop `buy` status list: check the manual's Shop section before use.

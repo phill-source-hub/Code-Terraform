@@ -26,6 +26,6 @@ Only `.correct` is read. Guess all-`base` once. Then change one position at a ti
 
 ## Open questions
 
-- Whether `terminal.length` is a property (as used) or a method: check in game.
-- Whether a guess's `.correct` follows the briefing rule exactly when digits repeat: the method depends on it. Check in game.
-- Guess budget or time cost per guess: not in the briefing.
+- Resolved by X-004 PASS (2026-10-17): `terminal.length` is a property.
+- Resolved by X-004 PASS: the `.correct` rule held in game.
+- Guess budget or time cost: not in the briefing and not observed as a limit in X-004.

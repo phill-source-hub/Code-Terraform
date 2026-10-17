@@ -4,7 +4,7 @@ Index and short facts. Detailed per-system extracts live in `docs/game/` (see it
 
 - **VERIFIED (docs)**: copied or summarised from the in-game DOCS manual, build `fe9a45c`, supplied by the owner.
 - **VERIFIED (stub)**: seen in the game-generated `__builtins__.pyi` stub (signature and/or docstring). Shape only, not in-game behaviour.
-- **VERIFIED (ingame)**: a script ran in game and the result was checked against `docs/in-game-test-log.md`. None yet.
+- **VERIFIED (ingame)**: a script ran in game and the result was checked against `docs/in-game-test-log.md`. See "In-game evidence" below.
 - **UNVERIFIED**: anything else. Do not write code that depends on it without a probe.
 
 The game's DOCS manual is the main reference. Stubs are generated per game build and sit in the game folder, not in the repo. After a game update, re-check signatures and bump the build id in `docs/game/README.md`.
@@ -13,13 +13,16 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 
 | File | Covers | Status |
 |------|--------|--------|
-| `docs/game/language.md` | output, self/components, result contract, long-running scripts, exceptions, loops | extracted, partial (see its "not yet extracted" list) |
+| `docs/game/language.md` | output, self/components, result contract, long-running scripts, exceptions, loops | extracted, partial; rest in `docs/game/manual/` |
 | `docs/game/libraries.md` | imports, Libraries, built-in modules, typing names | extracted |
 | `docs/game/rover.md` | Rover, nav, sonar, drill, mount, status | extracted |
 | `docs/game/power.md` | grids, power control, battery, battery charger, solar, vehicle charging | extracted |
 | `docs/game/fabricator.md` | fabricator, recipes (sample), ports, transfer results, ItemStack | extracted |
 | `docs/game/drone.md` | drones, fleet, drone service station | extracted |
-| `docs/game/contracts.md` | contracts, transmitter, contract result statuses | extracted; 15 contract subtypes not yet |
+| `docs/game/contracts.md` | contracts, transmitter, contract result statuses | extracted; subtype APIs in `docs/game/manual/` |
+| `docs/game/contracts-terminal-breach.md` | Alien Terminal Breach | extracted; in-game PASS (X-004) |
+| `docs/game/contracts-data-tablet.md` | Underground Data Tablet | extracted; in-game PASS (X-003) |
+| `docs/game/manual/` | full in-game DOCS manual, split by section (local, git-ignored, ADR-023) | complete, build fe9a45c |
 
 ## Language (headline facts)
 
@@ -40,6 +43,21 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 - VERIFIED (stub): every component has `.id` and `.type_id`.
 - VERIFIED (docs): `power_control.set_powered(machine_id, on)` pauses or resumes that machine's scripts. Outcomes include `not_enough_power`.
 
+## In-game evidence (VERIFIED ingame)
+
+- P-001 (2026-10-17): `get_game_version()`, `get_component("thermometer")`, `thermometer.type_id` and `Thermometer.get_value()` behave as the stub declares. Log in `docs/in-game-test-log.md`.
+- Contracts C-001, X-001 to X-004 (2026-10-17): `get_component("transmitter")`, `connect("earth")` and `transmit(contract.id, answer)` return status `correct`, and the contract status becomes `completed`.
+- X-003 and X-004: `tablet.rows`, `tablet.cols` and `terminal.length` are properties, and the `.correct` feedback rule held in game.
+- S-001 (2026-10-17): tilt = 90 - sun elevation, using `clock.get_elevation()`, matches the output on the morning check.
+
+## Data Archive and research gates (VERIFIED docs, manual)
+
+- Data Archive needs Data Archive research (Terraform Index 70,000). Before that `get_component("notebook")` returns `None`. Ship Computer research (Terraform Index 10,000) does not add it.
+- Automations (scripts with no machine) need Automations research (Terraform Index 50,000).
+- Library imports need Shared Library research, which comes after Ship Computer. Built-in modules (`re`, `math`, `heapq`, and others) do not need it.
+- Data Archive keys: 1 to 96 characters, ASCII letters, digits, `_`, `.`, `:`, `-`. Values are JSON-safe, at most 8 nested levels and 16,384 nodes. The store holds up to 2,048 entries. `set`, `delete` and `transaction` return `ActionResult`. `get`, `has` and `keys` return natural values.
+- Item flow through machine ports does nothing until Auto Feeders research is done (manual, FAQ). Scripts must move items themselves until then.
+
 ## Known game-vs-Ruff difference (log evidence)
 
 - VERIFIED (ingame log, 2026-10-17 15:46): the game reported `SyntaxError: invalid syntax at '/='` for an `oxygen_sensor.py` script at line 4. The owner's current file no longer contains `/=`, so the exact construct the game rejects is UNVERIFIED. Probe before relying on augmented assignment with `/=`.
@@ -48,4 +66,4 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 
 | Probe | Checks | Result |
 |-------|--------|--------|
-| `scripts/probes/probe_thermometer.py` (P-001) | version call, component lookup, thermometer read | not run yet |
+| `scripts/probes/probe_thermometer.py` (P-001) | version call, component lookup, thermometer read | PASS 2026-10-17 (in-game-test-log) |
