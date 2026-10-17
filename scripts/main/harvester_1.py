@@ -90,7 +90,7 @@ while True:
     if self.get_held() != "":
         stored = self.store()
         if stored.status == "ok":
-            print("stored " + str(stored.item_id) + " (was held)")
+            print("stored " + str(stored.item_id) + " (was held) heat " + str(self.get_heat()))
         else:
             set_status("store " + stored.status, "warn")
             sleep(SHORT_SECONDS)
@@ -125,7 +125,14 @@ while True:
             done.append(target_name)
             stored = self.store()
             if stored.status == "ok":
-                print("stored " + str(stored.item_id) + " from " + target_name)
+                print(
+                    "stored "
+                    + str(stored.item_id)
+                    + " from "
+                    + target_name
+                    + " heat "
+                    + str(self.get_heat())
+                )
             else:
                 set_status("store " + stored.status, "warn")
                 sleep(SHORT_SECONDS)

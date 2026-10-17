@@ -78,7 +78,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Expected: moves one cell per pass toward the nearest item (row first, then column). On arrival: collect, then `stored <item_id> from <sector>` printed. Heat stays under 80; status `cooling` appears above that.
 - Pass: the first item is collected and stored; the harvester moves between items without refusal; no `move too_far` warnings.
 - Planning: each trip is chosen by path heat (item cell 1, other cell 7), then steps. A trip that would reach heat 80 waits with status `cooling before the next trip`.
-- Check the first chosen item's path heat against the status and the heat readings in the log.
+- Each `stored` line now ends with `heat <N>`, the heat after the trip. Compare it with the planner's estimate (path heat from the map) to check the heat model.
 - Position is read from the game each pass (`get_position`), so the start cell does not matter. Check the first move's sector in the log matches the harvester's real position.
 
 | Date | Game version | Result | Notes |

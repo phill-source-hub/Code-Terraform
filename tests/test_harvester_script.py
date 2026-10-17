@@ -178,6 +178,13 @@ def test_prefers_the_item_with_the_lowest_path_heat_over_the_nearest():
     assert record == ["D13"]
 
 
+def test_stored_line_reports_the_heat_after_the_trip():
+    owner, record = harvester()
+    owner.get_heat = lambda: 42.0
+    game = run(owner, {"E13": ok_item()})
+    assert game.printed == ["stored soil_sample from E13 heat 42.0\n"]
+
+
 def test_machine_script_has_no_imports():
     for line in SCRIPT.read_text(encoding="utf-8").splitlines():
         assert not line.strip().startswith(("import ", "from ")), line
