@@ -1,0 +1,4 @@
+# Dev tooling only. Install into a local venv:
+#   python -m venv .venv && .venv/Scripts/python -m pip install -r requirements-dev.txt
+ruff==0.16.8
+pytest==9.1.1

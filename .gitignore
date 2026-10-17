@@ -1,0 +1,38 @@
+# Written by Code: Terraform. Machine-specific or regenerated files.
+logs/
+.codeterraform/
+.ruff_cache/
+__pycache__/
+codeterraform-workspace.json
+codeterraform-fleet.json
+codeterraform-scripts.json
+CODE-TERRAFORM-IDE.txt
+pyrightconfig.codeterraform.json
+*.pyi
+typeshed-LICENSE.txt
+*.codeterraform-write.bak
+*.codeterraform-write.tmp
+*.codeterraform-retired-*.bak
+
+# Local tooling and test output
+.venv/
+.pytest_cache/
+
+# Editor and OS junk
+.vscode/
+.zed/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Never commit saves, credentials or personal logs
+*.env
+.env.*
+*.key
+*.token
+save_*.json
+
+# Sync bookkeeping (hashes of files we last wrote to the game folder; game edits pulled for review)
+.sync-state.json
+.sync-pull/
