@@ -4,10 +4,12 @@ Where it runs: machine script slot `harvester_1` (game file `harvester_1.py`). P
     free slot as the first real script; it does not use the harvester.
 Self-contained on purpose (ADR-014): no imports. The rules are a copy of
     scripts/libs/power_status.py. Tests check the copy gives the same messages.
-Inputs: none. Reads power_control.grids() every POLL_SECONDS of game time.
-Output: a message prints (or warns) only when it changes; status shows the current state.
+Inputs: none. Reads power_control.grids() and battery_1 every POLL_SECONDS of game time.
+Output: a grid message prints (or warns) only when it changes. The status line always shows
+    the grid state and battery_1's charge; battery_1 low (under 20%) is a warning.
 API facts relied on (docs/game/power.md): get_component, power_control.grids(), PowerGrid
-    .net (W), .stored (Wh), .capacity (Wh); warn, print, set_status, sleep.
+    .net (W), .stored (Wh), .capacity (Wh), Battery .get_level() and .get_capacity() (Wh);
+    warn, print, set_status, sleep.
 """
 
 POLL_SECONDS = 5
@@ -31,6 +33,15 @@ def classify(net_w, stored_wh, capacity_wh):
     return alerts
 
 
+def battery_percent(battery):
+    if battery is None:
+        return None
+    capacity = battery.get_capacity()
+    if capacity <= 0:
+        return None
+    return round(battery.get_level() / capacity * 100)
+
+
 def totals(grids):
     net = 0.0
     stored = 0.0
@@ -43,6 +54,7 @@ def totals(grids):
 
 
 power = get_component("power_control")
+battery = get_component("battery_1")
 if power is None:
     set_status("power_control not found", "error")
 else:
@@ -50,6 +62,9 @@ else:
     while True:
         net, stored, capacity = totals(power.grids())
         alerts = classify(net, stored, capacity)
+        percent = battery_percent(battery)
+        if percent is not None and percent < LOW_STORAGE_FRACTION * 100:
+            alerts.append("battery_1 low: " + str(percent) + "%")
         message = "; ".join(alerts) or "power ok"
         if message != last_message:
             if alerts:
@@ -57,5 +72,8 @@ else:
             else:
                 print(message)
             last_message = message
-        set_status(message, "warn" if alerts else "info")
+        status = message
+        if percent is not None:
+            status = status + " | battery_1 " + str(percent) + "%"
+        set_status(status, "warn" if alerts else "info")
         sleep(POLL_SECONDS)

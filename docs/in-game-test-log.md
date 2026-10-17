@@ -109,6 +109,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Expected output, deficit: console warning `power deficit: net -<N> W`, status warn with the same text.
 - Expected output, low battery: console warning `low battery: <N>% stored`.
 - Expected behaviour: no machine state changes. Stop script ends the loop.
+- battery_1: status line also shows `| battery_1 <N>%` (status only, not printed). If battery_1 is under 20%, a warning `battery_1 low: <N>%` appears once. If battery_1 does not exist, the status has no battery part.
 - Pass criteria: each state above shows once and changes only when the state changes.
 
 | Date | Game version | Result | Notes |

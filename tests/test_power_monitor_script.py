@@ -100,3 +100,33 @@ def test_script_messages_match_library_rules(net, stored, capacity):
     shown = "; ".join(expected) or "power ok"
     assert (game.warnings or game.printed)[-1].strip() == shown
     assert summarize_grids([_grid(net, stored, capacity)])["net"] == net
+
+
+def _game_with_battery(grids, level, capacity):
+    game = _game(grids)
+    game.components["battery_1"] = FakeComponent(
+        id="battery_1",
+        type_id="battery",
+        methods={"get_level": lambda: level, "get_capacity": lambda: capacity},
+    )
+    return game
+
+
+def test_status_shows_battery_charge_without_printing_it():
+    game = _game_with_battery([_grid(net=20.0, stored=400.0, capacity=500.0)], 300.0, 500.0)
+    run_loop(SCRIPT, game, owner=None)
+    assert game.printed == ["power ok\n"]
+    assert game.statuses[-1] == ("power ok | battery_1 60%", "info")
+
+
+def test_low_battery_1_warns_and_turns_status_to_warn():
+    game = _game_with_battery([_grid(net=20.0, stored=400.0, capacity=500.0)], 50.0, 500.0)
+    run_loop(SCRIPT, game, owner=None)
+    assert game.warnings == ["battery_1 low: 10%\n"]
+    assert game.statuses[-1] == ("battery_1 low: 10% | battery_1 10%", "warn")
+
+
+def test_missing_battery_1_is_ignored():
+    game = _game([_grid(net=20.0, stored=400.0, capacity=500.0)])
+    run_loop(SCRIPT, game, owner=None)
+    assert game.statuses[-1] == ("power ok", "info")
