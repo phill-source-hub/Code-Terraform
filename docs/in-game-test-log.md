@@ -61,6 +61,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 - Run: Run Script in Game on `bio_lab_1`.
 - Expected status sequence: `sample shipped` (info) once per specimen. Before that, possibly `stock <reagent>: <status>` if reagents are missing (warn, paste it).
 - Pass: the chamber takes the specimen, analyzes it, loads reagents from Inventory, extracts one sample, the sample reaches Inventory, and the chamber is empty again.
+- 2026-10-17 (owner report): samples stuck in the output port. Scripted `send` needs Auto Feeders, so the port could not drain and extraction kept going. Fixed: the lab ships the output first, extracts only when the output is empty, and discards the specimen only after a successful ship. Until Auto Feeders is researched, a refused send is shown as `output not shipped: research_required`, and the specimen is kept.
 - ASSUMPTION to check: one sample per specimen. If the lab extracts again from the same specimen before discarding, or the discard fails, note it here.
 
 | Date | Game version | Result | Notes |
