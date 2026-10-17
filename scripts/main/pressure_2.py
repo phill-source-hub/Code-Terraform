@@ -33,6 +33,16 @@ while True:
     if not synced and low <= gauge <= high:
         result = self.sync()
         synced = True
+        print(
+            "sync at gauge "
+            + str(round(gauge, 2))
+            + " window "
+            + str(round(low, 2))
+            + "-"
+            + str(round(high, 2))
+            + ": "
+            + result.status
+        )
         if result.status != "ok":
             print("warning: sync " + result.status)
 
