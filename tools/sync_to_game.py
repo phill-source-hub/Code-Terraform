@@ -35,6 +35,10 @@ STATE_FILE = REPO_ROOT / ".sync-state.json"
 # Repo folder -> prefix in the game folder. Machine and contract scripts sit at the root;
 # Libraries go in lib/.
 SOURCE_DIRS = {"scripts/main": "", "scripts/contracts": "", "scripts/libs": "lib/"}
+# Automations have no machine slot. The game index registers them as `automation_<n>`, so each
+# repo automation is mapped to one name explicitly. An unmapped automation is not synced.
+AUTOMATION_DIR = "scripts/automations"
+AUTOMATION_TARGETS = {"base_watch.py": "automation_1.py"}
 PULL_DIR = REPO_ROOT / ".sync-pull"
 HELP_MARKER = "Help me"
 SAVE_FOLDER = "save_mvcjaxut_26ndfi_scripts"
@@ -89,6 +93,9 @@ def collect_repo_files(repo_root: Path) -> dict[str, bytes]:
     for source, prefix in SOURCE_DIRS.items():
         for path in sorted((repo_root / source).glob("*.py")):
             files[prefix + path.name] = normalize(path.read_bytes())
+    for path in sorted((repo_root / AUTOMATION_DIR).glob("*.py")):
+        if path.name in AUTOMATION_TARGETS:
+            files[AUTOMATION_TARGETS[path.name]] = normalize(path.read_bytes())
     return files
 
 

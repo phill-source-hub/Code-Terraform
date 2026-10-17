@@ -109,6 +109,18 @@ def test_collect_repo_files_skips_probes(tmp_path):
     assert collect_repo_files(tmp_path) == {}
 
 
+def test_collect_repo_files_maps_base_watch_automation_to_its_game_slot(tmp_path):
+    (tmp_path / "scripts" / "automations").mkdir(parents=True)
+    (tmp_path / "scripts" / "automations" / "base_watch.py").write_bytes(b"a")
+    assert collect_repo_files(tmp_path) == {"automation_1.py": b"a"}
+
+
+def test_an_unmapped_automation_is_not_synced(tmp_path):
+    (tmp_path / "scripts" / "automations").mkdir(parents=True)
+    (tmp_path / "scripts" / "automations" / "draft.py").write_bytes(b"d")
+    assert collect_repo_files(tmp_path) == {}
+
+
 def test_apply_writes_creates_and_updates_and_records_state(tmp_path):
     game = tmp_path / "game"
     game.mkdir()

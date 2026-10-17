@@ -81,13 +81,9 @@ Status values: Draft, L1+L2 pass, L3 pending, Done.
 
 ### Installing an Automation
 
-`tools/sync_to_game.py` copies only `scripts/main/` and `scripts/libs/`. To run `scripts/automations/*.py`:
+`tools/sync_to_game.py` copies `scripts/main/`, `scripts/contracts/`, `scripts/libs/`, and the automations listed in `AUTOMATION_TARGETS`. `base_watch.py` syncs to the game root as `automation_1.py`, the name the game index uses for automations. Needs Automations research. base_watch also needs Signal Bus research for heartbeats and alerts; it still reports power without it.
 
-1. In game, open Ship Computer > Automations and click **+ New Automation**.
-2. Paste the file's contents into its editor and save.
-3. Needs Automations research. base_watch also needs Signal Bus research for heartbeats and alerts (it still reports power without it).
-
-Where the game stores automation files on disk is UNVERIFIED, so this stays a manual paste until it is checked.
+Unmapped automation files are not synced. Add a name to `AUTOMATION_TARGETS` to sync one.
 
 ## Limits
 
