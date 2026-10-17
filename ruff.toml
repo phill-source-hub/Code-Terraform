@@ -1,0 +1,18 @@
+# Conservative Ruff config. The game's own generated config was not present in the
+# repo, and the game only applies a ruff.toml that lives in its scripts folder or
+# above it, so this file governs the repo only.
+line-length = 100
+target-version = "py312"
+
+# Game scripts run in a Python-like interpreter, not CPython. Keep the rules that
+# catch real bugs; skip the style-only groups that fight the game's idioms.
+[lint]
+select = ["E", "F", "W", "B", "UP", "SIM", "I"]
+ignore = []
+
+[lint.per-file-ignores]
+# Tests import modules by path (see tests/harness), which trips E402.
+"tests/**" = ["E402"]
+
+[format]
+quote-style = "double"
