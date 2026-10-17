@@ -32,3 +32,6 @@ Desktop.ini
 *.key
 *.token
 save_*.json
+
+# Sync bookkeeping (hashes of files we last wrote to the game folder)
+.sync-state.json
