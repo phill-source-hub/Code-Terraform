@@ -43,6 +43,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 - Script: `scripts/contracts/relay_hack.py`, synced to the game root as `relay_hack.py` (applied 2026-10-17). Library: `lib/relay_hack.py` (synced).
 - Where it runs: the contract script for `relay_hack`. Open the contract from the Contracts page (View Contract) and confirm its script is the synced one.
+- Version: self-contained (no imports, ADR-013). Earlier runs failed with `Shared Library not yet researched` on `lib/` import.
 - Setup state: `relay_hack` contract available (status `available`). Transmitter has earth in `list_planets()`.
 - How to run: run the contract script once.
 - Expected console: one line `correct <message>` and the contract shows `completed` with its reward paid. Seeing `relay_hack failed: ...` means the search failed. Paste that text.

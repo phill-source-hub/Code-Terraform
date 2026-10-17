@@ -16,6 +16,28 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+# Builtins declared in the game's stub (`__builtins__.pyi`). Add a name only when it is in the stub.
+GAME_BUILTINS = (
+    "len",
+    "range",
+    "enumerate",
+    "all",
+    "any",
+    "zip",
+    "list",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "sorted",
+    "min",
+    "max",
+    "sum",
+    "isinstance",
+    "abs",
+    "round",
+)
+
 # Built-in exception names listed in the game's DOCS manual (build fe9a45c, Exceptions).
 GAME_EXCEPTIONS = (
     "ValueError",
@@ -105,7 +127,8 @@ class FakeGame:
             "print": self.print,
             "warn": self.warn,
             "sleep": self.sleep,
-            "round": round,
+            # Common builtins declared in the game stub (VERIFIED stub).
+            **{name: getattr(builtins, name) for name in GAME_BUILTINS},
             # Exception names the game supports (DOCS, Exceptions section).
             **{name: getattr(builtins, name) for name in GAME_EXCEPTIONS},
             "set_status": self.set_status,

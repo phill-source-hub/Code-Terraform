@@ -73,3 +73,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: the owner names a script and writes `Help me` on line 1 of its game file. A file whose only content is that marker is treated as a request and may be replaced by sync. Any other owner code under the marker is a normal conflict. Game-side edits to files we wrote come back with `tasks.ps1 pull`, into `.sync-pull/`, never into the repo directly. `--only NAME` limits plan, apply and pull to one script.
 - Why: the manual says the game keeps both versions when files collide and never overwrites an edited in-game script. A one-line marker is an explicit owner instruction, so it is safe to act on; anything else is left for review.
+
+## ADR-013: Contract scripts are self-contained until Shared Library is researched
+
+- Date: 2026-10-17
+- Decision: `scripts/contracts/relay_hack.py` has no imports. It carries a copy of the solver from `scripts/libs/relay_hack.py`. Tests check the copy gives the right code on the same inputs.
+- Why: the game raised `RuntimeError: Shared Library not yet researched` on any import from `lib/`. Contract scripts cannot wait for that research. Revisit when Shared Library is unlocked and move contract scripts back to imports.
