@@ -72,11 +72,11 @@ def test_night_sets_rest_tilt():
     assert tilts == [90.0]
 
 
-def test_samples_every_twelfth_of_a_world_hour():
+def test_samples_every_sixtieth_of_a_world_hour():
     tilts: list[float] = []
     game, panel = _game(elevation=45.0, samples=3, tilts=tilts)
     _run(game, panel)
-    assert game.sleeps == [300.0, 300.0, 300.0]
+    assert game.sleeps == [60.0, 60.0, 60.0]
     assert len(tilts) == 3
 
 
