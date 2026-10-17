@@ -233,7 +233,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-| - | fe9a45c | NOT RUN | Awaiting owner run. |
+| 2026-10-17 | fe9a45c | PASS | Owner reports contract complete. Log: `script contract_data_tablet: completed`. |
 
 ## Scripts
 
