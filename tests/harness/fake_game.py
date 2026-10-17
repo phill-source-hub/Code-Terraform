@@ -16,6 +16,28 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+# Built-in exception names listed in the game's DOCS manual (build fe9a45c, Exceptions).
+GAME_EXCEPTIONS = (
+    "ValueError",
+    "TypeError",
+    "KeyError",
+    "IndexError",
+    "AttributeError",
+    "RuntimeError",
+    "NameError",
+    "ImportError",
+    "ModuleNotFoundError",
+    "ZeroDivisionError",
+    "StopIteration",
+    "GeneratorExit",
+    "AssertionError",
+    "NotImplementedError",
+    "RecursionError",
+    "OverflowError",
+    "SyntaxError",
+    "Exception",
+)
+
 
 @dataclass
 class FakeClock:
@@ -84,15 +106,27 @@ class FakeGame:
             "warn": self.warn,
             "sleep": self.sleep,
             "round": round,
+            # Exception names the game supports (DOCS, Exceptions section).
+            **{name: getattr(builtins, name) for name in GAME_EXCEPTIONS},
             "set_status": self.set_status,
             "notify": self.notify,
             "get_component": self.get_component,
         }
 
 
-def run_script(source: str, game: FakeGame, filename: str = "<script>") -> dict[str, Any]:
-    """Compile and run `source` against `game`. Returns the script's globals."""
+def run_script(
+    source: str,
+    game: FakeGame,
+    filename: str = "<script>",
+    extra_globals: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Compile and run `source` against `game`. Returns the script's globals.
+
+    `extra_globals` injects script-owner names the game provides, such as `self`
+    for a contract script.
+    """
     namespace: dict[str, Any] = {"__builtins__": game.builtins(), "__name__": "__main__"}
+    namespace.update(extra_globals or {})
     code = compile(source, filename, "exec")
     exec(code, namespace)
     return namespace

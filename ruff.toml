@@ -17,6 +17,8 @@ ignore = []
 [lint.per-file-ignores]
 # Tests import modules by path (see tests/harness), which trips E402.
 "tests/**" = ["E402"]
+# Contract scripts run with `self` (the ContractScript) injected by the game. Ruff cannot see it.
+"scripts/contracts/**" = ["F821"]
 
 [format]
 quote-style = "double"
