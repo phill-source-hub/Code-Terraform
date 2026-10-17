@@ -37,6 +37,24 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 |------|--------------|--------|-------|
 |      |              |        |       |
 
+## Machines
+
+### S-001: Solar tracker (`solar_1`)
+
+- Script: `scripts/main/solar_1.py` (self-contained, ADR-013). Library copy: `scripts/libs/solar_tracker.py` (tested source; not imported by the game).
+- Where it runs: machine `solar_1`, a Solar Generator. Buy one from the Shop (500 cr) and name it `solar_1` if the id differs.
+- Setup state: sun up. Tilt is at 90 (rest) when the script starts.
+- How to run: Run Script in Game on `solar_1`. It re-searches every 300 s of game time.
+- Expected: status bar `tilt <N> deg` (info). `N` changes between searches as the sun moves. At night the status shows `tilt 90.0 deg`.
+- Expected behaviour: output (`get_output()`) is at or near its daytime maximum after each search. Tilt is never outside 0-90.
+- Pass criteria: no error status. Output rises to the peak after the first search. Stopping the script returns the panel to 90.
+- Open risk: settle time (1 s) is a guess. If output lags, the search picks a wrong tilt. Note the output value next to the status.
+- Pre-req: sync `solar_tracker` Library is not needed (the script is self-contained). Shared Library research is not needed.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
 ## Contracts
 
 ### C-001: Orbital Relay Hack (`relay_hack`)

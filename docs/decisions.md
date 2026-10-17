@@ -79,3 +79,9 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-17
 - Decision: `scripts/contracts/relay_hack.py` has no imports. It carries a copy of the solver from `scripts/libs/relay_hack.py`. Tests check the copy gives the right code on the same inputs.
 - Why: the game raised `RuntimeError: Shared Library not yet researched` on any import from `lib/`. Contract scripts cannot wait for that research. Revisit when Shared Library is unlocked and move contract scripts back to imports.
+
+## ADR-014: Machine scripts are self-contained too (extends ADR-013)
+
+- Date: 2026-10-17
+- Decision: `solar_1.py` carries its own copy of the tilt search and imports nothing. The power monitor (`harvester_1.py`) imports `lib/power_status` and must get the same treatment before its L3 run.
+- Why: any `lib/` import needs Shared Library research, which the save lacks. The first machine script that imports from `lib/` will fail the same way the relay contract did.
