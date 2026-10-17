@@ -70,7 +70,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | o2gen_1 | Intake CO2/10, dump waste only in 50-60, last resort at 90 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
 | solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; imports the `solar_tracker` Library | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001); lib import L3 pending |
-| relay_hack (contract) | Orbital Relay Hack; imports the `relay_hack` Library | contract `relay_hack` | Done (C-001 PASS); lib import L3 pending |
+| relay_hack (contract) | Orbital Relay Hack; imports the `relay_solver` Library (ADR-030) | contract `relay_hack` | Done (C-001 PASS); lib import L3 pending |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
 | corrupted_archive (contract) | Pair matching words in 10x10 grid | contract `corrupted_archive` | Done (X-002 PASS) |
 | terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |

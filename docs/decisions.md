@@ -190,3 +190,10 @@ Short, newest last. Format: date, decision, why.
 - Why: ADR-017 parked the monitor because it needed a machine slot. An Automation has no slot, and a brownout never pauses it (manual, Automations). One watcher for the base beats one per machine.
 - Supersedes: ADR-017 (parked monitor), and the ADR-016 copy of its rules.
 - Status: repo side done. Install is a manual paste (sync does not copy automations; game storage path UNVERIFIED). In-game checklist: `docs/in-game-test-log.md`, section "base_watch".
+
+## ADR-030: The relay solver Library is named `relay_solver`
+
+- Date: 2026-10-17
+- Decision: `scripts/libs/relay_hack.py` is renamed `scripts/libs/relay_solver.py`, and the game Library is named `relay_solver`. The contract script keeps the name `relay_hack`, since the contract id and script name are the game's own.
+- Why: the game refused `relay_hack` as a Library name ("reserved name in-game"). The other six Library names were accepted.
+- Status: repo side done. Owner creates Library `relay_solver` in game before the contract is synced, since the contract imports it.

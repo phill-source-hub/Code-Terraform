@@ -10,7 +10,7 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 | `corrupted_archive.py`, `data_tablet.py`, `terminal_breach.py`, `xenogenetics.py` | `scripts/contracts/` | same |
 | `pressure_1.py`, `pressure_2.py` | `scripts/main/` (generated from `scripts/templates/pressure_slot.py`) | same |
 | `scanner_1.py` | `scripts/main/` | same since the 2026-10-17 apply |
-| `lib/*.py` (7 files) | `scripts/libs/` | `power_status`, `relay_hack`, `solar_tracker`, `grid`, `trip_log`, `job_queue`, `base_watch` |
+| `lib/*.py` (7 files) | `scripts/libs/` | `power_status`, `relay_solver`, `solar_tracker`, `grid`, `trip_log`, `job_queue`, `base_watch` |
 
 ## Tracked, game copy differs (sync conflict, skipped)
 

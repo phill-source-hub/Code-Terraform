@@ -3,6 +3,8 @@
 # above it, so this file governs the repo only.
 line-length = 100
 target-version = "py312"
+# Owner copies must stay byte-identical to the game files (no trailing newline, no reformat).
+exclude = ["scripts/owner"]
 # Game-provided names that are not CPython builtins. Declared so F821 (undefined
 # name) does not fire on game scripts. Add a name only when its stub line is
 # recorded in docs/api-notes.md. The harness (tests/harness) is the runtime check.
