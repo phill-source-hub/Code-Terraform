@@ -19,6 +19,9 @@ API facts relied on (manual, Oxygen Generator and Atmosphere): self.set_intake(v
 
 DUMP_LOW = 50
 DUMP_HIGH = 60
+# Waste moves over minutes, not seconds, so a 1 s pause is safe. Without it the loop spins
+# and burns game time on the missing-atmosphere branch (CLAUDE.md: every loop needs a sleep).
+PASS_SECONDS = 1
 # Last resort: waste this high is close to the stall at 100. A dump here takes the penalty,
 # which is accepted only to keep the generator running. Owner-set; not a manual value.
 LAST_RESORT = 90
@@ -30,6 +33,7 @@ above_warned = False
 while True:
     if atmosphere is None:
         set_status("atmosphere not found", "error")
+        sleep(PASS_SECONDS)
         continue
 
     intake = atmosphere.get_co2() / 10
@@ -78,3 +82,4 @@ while True:
     if status != last_status:
         set_status(status, "info")
         last_status = status
+    sleep(PASS_SECONDS)
