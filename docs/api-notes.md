@@ -88,8 +88,7 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 
 ## Control Room cards (VERIFIED stub for names; behaviour UNVERIFIED until D-001 to D-005)
 
-- UNVERIFIED: a card script can import a Library (). Libraries import in game scripts; panel scripts are not tested yet. D-001 is the first run.
-- UNVERIFIED:  and  on an unrepaired sensor. The manual says these need the sensor repaired. The cards catch any exception and show . The exact game behaviour (raise, or a value) is not checked; D-005 covers it.
-- UNVERIFIED: builtins used by the cards (, , , , , , , , ). Assumed from the Python-like stub;  checks imports only, not builtins.
-- VERIFIED stub:  returns the stored text or ;  takes , , , .
-
+- UNVERIFIED: a card script can import a Library (`from control_room import ...`). Libraries import in game scripts; panel scripts are not tested yet. D-001 is the first run.
+- UNVERIFIED: `get_o2()` and `get_pressure()` on an unrepaired sensor. The manual says these need the sensor repaired. The cards catch any exception and show `unavailable`. The exact game behaviour (raise, or a value) is not checked; D-005 covers it.
+- UNVERIFIED: builtins used by the cards (`sorted`, `enumerate`, `int`, `str`, `float`, `len`, `max`, `min`, `list +`). Assumed from the Python-like stub; `tests/test_script_imports.py` checks imports only, not builtins.
+- VERIFIED stub: `panel.text_field(key, x, y, w, default, placeholder, label, size)` returns the stored text or `default`; `status_dot` takes `running`, `paused`, `error`, `idle`.
