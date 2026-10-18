@@ -153,8 +153,9 @@ def test_status_names_the_order_fragment_and_the_shortfall_it_was_picked_for():
 
     owner.collect = collect
     run_loop(SCRIPT, game, owner)
-    assert game.statuses[0][0] == (
-        "collected order: ms_chelicera (short ms_chelicera:1, explore True), 1.0 m"
+    assert game.statuses[0][0].startswith(
+        "collected order: ms_chelicera; biome frozen, orders 1, journal -1, dots 1/1, "
+        "short ms_chelicera:1, explore True"
     )
 
 
@@ -295,7 +296,7 @@ def test_completed_orders_are_ignored():
 def test_holds_its_specimen_while_cargo_is_occupied():
     owner, game = setup([loc([1.0, 2.0])], cargo=specimen([1.0, 2.0]))
     assert first_collect(owner, game) is None
-    assert game.statuses[-1] == ("holding a specimen for the Bio Lab", "info")
+    assert game.statuses[-1][0].startswith("holding a specimen for the Bio Lab; biome frozen")
 
 
 def test_busy_collect_is_retried_after_a_short_pause():

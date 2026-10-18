@@ -277,12 +277,15 @@ def blocked(message):
     sleep(PAUSE_SECONDS)
 
 
-while True:
-    if self.cargo is not None:
-        say("holding a specimen for the Bio Lab", "info")
-        sleep(RETRY_SECONDS)
-        continue
+def matched_dots(locations, dots):
+    count = 0
+    for location in locations:
+        if identity(location, dots) is not None:
+            count += 1
+    return count
 
+
+while True:
     locations = self.scan()
     exchange = get_component(EXCHANGE_ID)
     inventory = get_component("inventory")
@@ -305,22 +308,44 @@ while True:
         pending_counts([lab_specimen(lab)], locations, dots),
     )
 
+    # Shown on the status line on every pass, so the inputs to a pick can be read off the game:
+    # biome, open orders, Journal entries, dots identified, dots matched in the scan, units short
+    # and whether exploring is allowed. Kept first so the clip at 240 characters cuts the end.
+    diag = (
+        "biome "
+        + str(self.outpost.biome)
+        + ", orders "
+        + str(len(orders))
+        + ", journal "
+        + str(-1 if entries is None else len(entries))
+        + ", dots "
+        + str(matched_dots(locations, dots))
+        + "/"
+        + str(len(locations))
+        + ", short "
+        + short_text(needed)
+        + ", explore "
+        + str(explore)
+    )
+
+    if self.cargo is not None:
+        say("holding a specimen for the Bio Lab; " + diag, "info")
+        sleep(RETRY_SECONDS)
+        continue
+
     target = pick_target(locations, needed, explore, dots)
-    # Shown on the status line so a wrong pick can be traced to its inputs: the units still
-    # short per fragment, and whether the pick is for an order or an exploration.
-    reason = "short " + short_text(needed) + ", explore " + str(explore)
     if target is None:
-        say("idle, nothing picked (" + reason + ")", "info")
+        say("idle, nothing picked; " + diag, "info")
         sleep(PAUSE_SECONDS)
         continue
-    if target.cataloged:
-        reason = "order: " + target.fragment_id + " (" + reason + ")"
+    if identity(target, dots) is None:
+        reason = "explore"
     else:
-        reason = "explore (" + reason + ")"
+        reason = "order: " + str(identity(target, dots))
 
     result = self.collect(target.coords)
     if result.status == "ok":
-        say("collected " + reason + ", " + str(target.distance) + " m", "info")
+        say("collected " + reason + "; " + diag, "info")
     elif result.status == "busy":
         sleep(RETRY_SECONDS)
     else:
