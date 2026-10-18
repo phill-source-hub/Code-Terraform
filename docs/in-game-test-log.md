@@ -425,7 +425,7 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | PASS | Rover stranded at about 10% away from base; station dispatched the drone (`rescue drone sent to rover_1`). Drone charged the rover where it stood, and the rover resumed and returned to base. |
 
 ### R-007: Map markers (`rover_1`, Cartography)
 
