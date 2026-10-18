@@ -6,6 +6,7 @@ clear() calls, so the tests see the first two passes (checks, then the persist r
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from tests.harness.fake_comms import FakeSignalBus
 from tests.harness.fake_game import FakeGame
@@ -16,6 +17,7 @@ PROBE = Path(__file__).resolve().parent.parent / "scripts" / "probes" / "probe_c
 
 class FakePanel:
     def __init__(self, *, fail_widget=None, clicks=(), stop_after=2, mouse=(10, 20)):
+        # Real mouse() returns a PanelMouse with x and y fields (stub: PanelMouse).
         self.fail_widget = fail_widget
         self.clicks_value = list(clicks)
         self.stop_after = stop_after
@@ -35,7 +37,8 @@ class FakePanel:
             raise ScriptStop
 
     def mouse(self):
-        return self.mouse_value
+        x, y = self.mouse_value
+        return SimpleNamespace(x=x, y=y, over=False, pressed=False, released=False)
 
     def clicks(self):
         return list(self.clicks_value)
@@ -82,7 +85,7 @@ def test_widgets_draw_and_every_check_passes_on_a_working_fake():
     assert _console(game, "widgets") == "probe widgets: PASS 12 widgets drawn\n"
     assert _console(game, "text") == "probe text: PASS round trip ok\n"
     assert _console(game, "switch") == "probe switch: PASS round trip ok\n"
-    assert _console(game, "mouse") == "probe mouse: PASS (10, 20)\n"
+    assert _console(game, "mouse") == "probe mouse: PASS x=10 y=20\n"
     assert _console(game, "bus") == "probe bus: PASS sizes 200, 2000, 20000 intact\n"
 
 
@@ -144,3 +147,14 @@ def test_bus_drains_its_channel_so_nothing_is_left_behind():
     _run(FakePanel(), bus=bus)
 
     assert bus.queues.get("ctrl.probe.echo", []) == []
+
+
+def test_keyed_widgets_take_the_key_first_as_the_game_stub_does():
+    # Run 1 in game failed on key order: the stub puts `key` first on these widgets.
+    panel = FakePanel()
+    _run(panel, bus=FakeSignalBus())
+
+    keyed = {"button", "switch", "text_field", "combo"}
+    for name, args in panel.calls:
+        if name in keyed:
+            assert isinstance(args[0], str), name

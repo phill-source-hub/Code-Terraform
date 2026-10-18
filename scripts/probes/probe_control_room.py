@@ -3,9 +3,11 @@
 Where it runs: a Control Room card. Open the Control Room, click + New Card, paste this file as the
     card's script. Use a 2x1 card so the rows fit. Delete the card when the probe is done.
 Inputs: one click on empty space on the card (checks clicks()). Nothing else is needed.
-Assumptions: none from docs/api-notes.md yet. Every panel call here is UNVERIFIED. The probe finds
-    out which calls work and what their real argument shapes are. The argument shapes below are
-    guesses from the Control Room brief; a FAIL that says TypeError is the signal to fix the shape.
+Assumptions: argument shapes follow the game stub (`__builtins__.pyi`, VERIFIED stub). Behaviour is
+    not verified until the in-game log passes. A FAIL that says TypeError means the stub and the
+    call disagree: fix the call.
+Run 1 (2026-10-18, panel_1.py): widgets FAILed on key order (key goes first); bus FAILed because
+    the packet is a CommsMessage, so the check compares .value, not str(packet).
 Checks run once, on the first pass, and their results are kept in module state and drawn each tick:
     widgets  each named widget and primitive is drawn without error
     persist  module state survives between ticks (row turns PASS on the second tick)
@@ -39,10 +41,10 @@ def _widget_calls():
         ("label", lambda: panel.label(10, 40, "PROBE", "caption")),
         ("status_dot", lambda: panel.status_dot(10, 60, 5, "running")),
         ("progress_bar", lambda: panel.progress_bar(60, 54, 80, 10, 0.5, "success")),
-        ("button", lambda: panel.button(160, 50, 80, 20, "Probe", "probe.button")),
-        ("switch", lambda: panel.switch(260, 50, "probe.switch")),
-        ("text_field", lambda: panel.text_field(10, 90, 200, 24, "probe.text")),
-        ("combo", lambda: panel.combo(230, 90, 120, 24, ["a", "b"], "probe.combo")),
+        ("button", lambda: panel.button("probe.button", 160, 50, 80, 20, "Probe")),
+        ("switch", lambda: panel.switch("probe.switch", 260, 50)),
+        ("text_field", lambda: panel.text_field("probe.text", 10, 90, 200)),
+        ("combo", lambda: panel.combo("probe.combo", 230, 90, 120, ["a", "b"])),
         ("draw_rect", lambda: panel.draw_rect(10, 130, 40, 20, "border")),
         ("draw_line", lambda: panel.draw_line(60, 130, 120, 150, "accent")),
         ("draw_circle", lambda: panel.draw_circle(140, 140, 6, "accent")),
@@ -84,7 +86,7 @@ def check_mouse():
     position = panel.mouse()
     if position is None:
         return "FAIL", "mouse() returned None"
-    return "PASS", str(position)[:60]
+    return "PASS", "x=" + str(position.x) + " y=" + str(position.y)
 
 
 def check_bus(comms):
@@ -99,7 +101,8 @@ def check_bus(comms):
         got = comms.receive(CHANNEL, sent.message_id)
         if got.status != "ok":
             return "FAIL", "receive " + str(size) + ": " + got.status
-        if text not in str(got.packet):
+        # The packet is a CommsMessage; the sent dict is on its .value field.
+        if got.packet.value != {"req": size, "text": text}:
             return "FAIL", "payload " + str(size) + " came back changed"
         sizes.append(str(size))
     _drain(comms)

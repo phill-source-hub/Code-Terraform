@@ -366,4 +366,5 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | FAIL (run 1, script `panel_1.py`) | widgets: key must be the first argument on button, switch, text_field, combo (fixed in the probe). bus: payload check compared str(packet); the packet is a CommsMessage, so the check now reads .value (fixed). text, switch, mouse, persist, click PASS. Log: `panel_1.log`, ticks 479786-479950. |
+| 2026-10-18 | fe9a45c | PENDING (run 2) | Re-paste the fixed probe as `panel_1.py`, then click empty card space once. |
