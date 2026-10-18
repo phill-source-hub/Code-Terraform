@@ -1,6 +1,8 @@
 """Solar tracker: keep the panel facing the sun. Writes tilt.
 
-Where it runs: machine script slot `solar_5` (Solar Generator, component id solar_5).
+Where it runs: every Solar Generator script slot, including ones added later. The same file runs
+    on each one. `self` is the generator it runs on, so the file never names its
+    slot (ADR-033). Copy this file to add a generator; do not edit a copy by hand.
 Imports the shared `solar_tracker` Library for the tilt rule (ADR-025).
 Rule: tilt = 90 - sun elevation (clamped 0-90). Night (elevation 0) rests at 90.
 Timing: runs forever (the loop is what keeps the panel tracking). Samples every 1/60 of a
