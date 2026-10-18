@@ -1,7 +1,8 @@
 """D2 power runway: one gauge per power grid, with the game hours of storage left at the deficit.
 
-Where it runs: Control Room card, size 2x1 (1000 x 200). Paste this file as the card's script
-    (Control Room > + New Card). Not synced: paste it in game, like the Automations.
+Where it runs: Control Room card. Works at any size; 2x1 (1000 x 200) shows the most grids.
+    Paste this file as the card's script (Control Room > + New Card). Not synced: paste it in game,
+    like the Automations.
 Inputs: power_control.grids(). No player input.
 Assumptions: Library `control_room` is in game lib/ (synced from scripts/libs/, owner go-ahead).
 API facts relied on (VERIFIED stub): get_component("power_control"), grids(), PowerGrid fields
@@ -12,14 +13,15 @@ API facts relied on (VERIFIED stub): get_component("power_control"), grids(), Po
 from control_room import (
     BAND_DOT,
     BAND_TOKEN,
+    columns_for,
+    fit_text,
     grid_storage_fraction,
     runway_band,
     runway_hours,
-    short_text,
 )
 
 MARGIN = 16
-COLUMN_WIDTH = 240
+MIN_COLUMN = 200
 MAX_COLUMNS = 4
 
 
@@ -30,15 +32,16 @@ def runway_label(hours):
     return "runway " + str(int(hours * 10) / 10) + " h"
 
 
-def draw_grid(x, grid):
+def draw_grid(x, column_width, grid):
     hours = runway_hours(grid.net, grid.stored, grid.reserve_stored)
     band = runway_band(hours)
     fraction = grid_storage_fraction(
         grid.stored, grid.capacity, grid.reserve_stored, grid.reserve_capacity
     )
+    name_width = column_width - 24
     panel.status_dot(x + 6, 44, 5, BAND_DOT[band])
-    panel.draw_text(x + 18, 44, short_text(grid.anchor_id, 18), 13, "text-bright")
-    panel.progress_bar(x, 64, 220, 12, fraction, BAND_TOKEN[band])
+    panel.draw_text(x + 18, 44, fit_text(grid.anchor_id, name_width, 13), 13, "text-bright")
+    panel.progress_bar(x, 64, name_width + 6, 12, fraction, BAND_TOKEN[band])
     panel.draw_text(x, 96, "net " + str(int(grid.net)) + " W", 12, "text-secondary")
     panel.draw_text(x, 118, runway_label(hours), 12, "text-value")
 
@@ -48,6 +51,7 @@ while True:
     width = panel.width()
     height = panel.height()
     panel.card(4, 4, width - 8, height - 8, "POWER RUNWAY")
+    content = width - 2 * MARGIN
     power = get_component("power_control")
     if power is None:
         panel.draw_text(MARGIN, 60, "Power control not available", 13, "text-muted")
@@ -55,8 +59,12 @@ while True:
         grids = power.grids()
         if not grids:
             panel.draw_text(MARGIN, 60, "No power grids", 13, "text-muted")
-        for index, grid in enumerate(grids[:MAX_COLUMNS]):
-            draw_grid(MARGIN + index * COLUMN_WIDTH, grid)
-        if len(grids) > MAX_COLUMNS:
-            hidden = str(len(grids) - MAX_COLUMNS)
-            panel.draw_text(MARGIN, height - 20, hidden + " more grids not shown", 11, "text-muted")
+        columns = columns_for(content, MIN_COLUMN, MAX_COLUMNS)
+        column_width = content // columns
+        for index, grid in enumerate(grids[:columns]):
+            draw_grid(MARGIN + index * column_width, column_width, grid)
+        hidden = len(grids) - columns
+        if hidden > 0:
+            panel.draw_text(
+                MARGIN, height - 20, str(hidden) + " more grids not shown", 11, "text-muted"
+            )

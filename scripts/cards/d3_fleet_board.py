@@ -1,7 +1,8 @@
 """D3 fleet board: one row per vehicle and drone, with a status dot, the status and a fill bar.
 
-Where it runs: Control Room card, size 2x1 (1000 x 200). Paste this file as the card's script
-    (Control Room > + New Card). Not synced: paste it in game, like the Automations.
+Where it runs: Control Room card. Works at any size; a 1x1 card shows the first few units.
+    Paste this file as the card's script (Control Room > + New Card). Not synced: paste it in game,
+    like the Automations.
 Inputs: fleet.vehicles() and fleet.drones(). No player input.
 Assumptions: Library `control_room` is in game lib/ (synced from scripts/libs/, owner go-ahead).
     Problem units (red) sort to the top, so a stranded rover is never off screen.
@@ -13,19 +14,17 @@ API facts relied on (VERIFIED stub): get_component("fleet"), vehicles(), drones(
 from control_room import (
     FLEET_DOT,
     FLEET_TOKEN,
+    fit_text,
     fleet_color,
     fleet_sort_key,
-    short_text,
+    rows_for,
     unit_fraction,
 )
 
 MARGIN = 16
 FIRST_ROW_Y = 50
 ROW_HEIGHT = 22
-NAME_X = 30
-STATUS_X = 200
-BAR_X = 420
-BAR_WIDTH = 160
+BOTTOM_PAD = 20
 
 
 def vehicle_row(vehicle):
@@ -58,11 +57,19 @@ def fleet_rows(fleet):
     return sorted(rows, key=fleet_sort_key)
 
 
-def draw_row(y, row):
+def draw_row(y, row, width):
+    # Columns are shares of the card width, so the bar always ends inside the card.
+    content = width - 2 * MARGIN
+    name_x = MARGIN + 14
+    status_x = MARGIN + content * 36 // 100
+    bar_x = MARGIN + content * 66 // 100
+    name_width = status_x - name_x - 8
+    status_width = bar_x - status_x - 8
+    bar_width = width - MARGIN - bar_x
     panel.status_dot(MARGIN + 6, y, 5, FLEET_DOT[row["color"]])
-    panel.draw_text(NAME_X, y, short_text(row["name"], 20), 13, "text-bright")
-    panel.draw_text(STATUS_X, y, row["status"], 12, "text-secondary")
-    panel.progress_bar(BAR_X, y - 5, BAR_WIDTH, 10, row["fraction"], FLEET_TOKEN[row["color"]])
+    panel.draw_text(name_x, y, fit_text(row["name"], name_width, 13), 13, "text-bright")
+    panel.draw_text(status_x, y, fit_text(row["status"], status_width, 12), 12, "text-secondary")
+    panel.progress_bar(bar_x, y - 5, bar_width, 10, row["fraction"], FLEET_TOKEN[row["color"]])
 
 
 while True:
@@ -77,9 +84,9 @@ while True:
         rows = fleet_rows(fleet)
         if not rows:
             panel.draw_text(MARGIN, FIRST_ROW_Y, "No vehicles or drones yet", 13, "text-muted")
-        visible = max((height - FIRST_ROW_Y - 20) // ROW_HEIGHT, 1)
+        visible = rows_for(height, FIRST_ROW_Y, ROW_HEIGHT, BOTTOM_PAD)
         for index, row in enumerate(rows[:visible]):
-            draw_row(FIRST_ROW_Y + index * ROW_HEIGHT, row)
-        if len(rows) > visible:
-            hidden = str(len(rows) - visible)
-            panel.draw_text(MARGIN, height - 16, "+" + hidden + " more", 11, "text-muted")
+            draw_row(FIRST_ROW_Y + index * ROW_HEIGHT, row, width)
+        hidden = len(rows) - visible
+        if hidden > 0:
+            panel.draw_text(MARGIN, height - 16, "+" + str(hidden) + " more", 11, "text-muted")

@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CARDS = ROOT / "scripts" / "cards"
 sys.path.insert(0, str(ROOT / "scripts" / "libs"))
 
+from control_room import TEXT_EM  # noqa: E402
+
 
 def _run(card, panel, **components):
     game = FakeGame()
@@ -251,3 +253,68 @@ def test_d1_without_power_data_says_so_and_never_claims_nominal():
     assert "BASE OVERVIEW" in [args[4] for args in panel.named("card")]
     assert "No power data" in panel.texts()
     assert "All systems nominal" not in panel.texts()
+
+
+# Every card must draw inside its own card at each size the game offers. The sizes are the four
+# card sizes (1x1, 2x1, 1x2, 2x2); the data is busy on purpose so the clipping is exercised.
+CARD_SIZES = [(500, 200), (1000, 200), (500, 400), (1000, 400)]
+CARD_FILES = [
+    "d1_base_overview.py",
+    "d2_power_runway.py",
+    "d3_fleet_board.py",
+    "d6_earth_orders.py",
+    "d9_signal_bus.py",
+]
+
+
+def _busy_game():
+    grids = [_grid("grid_with_a_long_anchor_" + str(i), -20.0 * (i + 1), 50.0) for i in range(5)]
+    fleet = SimpleNamespace(
+        vehicles=lambda: [_rover("a_very_long_rover_name_here", "stranded")],
+        drones=lambda: [
+            _drone(
+                "heli_drone_with_long_name", "waiting_oil", engine="heli", tons=2.0, tons_cap=10.0
+            ),
+            _drone("electric_drone_two", "traveling"),
+        ],
+    )
+    current = [
+        _order(
+            "Helios, Iron Bootstrap Campaign Phase Two", {"iron_ingot": 150}, {"iron_ingot": 40}
+        ),
+        _order("Spire, Raw Iron Intake", {"iron_ingot": 50}, {}),
+        _order("Vestibule, Utility Connection Upgrade", {"water": 20}, {"water": 5}),
+        _order("Fourth order with a long name too", {"water": 9}, {"water": 9}),
+    ]
+    upcoming = [_order("Next long order name", {"water": 4}, {}, reward=300)] * 3
+    bus = FakeSignalBus()
+    for index in range(8):
+        bus.send("ctrl.rover_1.dispatch", {"task": "x" * 200, "n": index})
+    bus.broadcast("ctrl.rover_1.dispatch", {"note": "y" * 300})
+    return {
+        "power_control": _power(*grids),
+        "atmosphere": _Atmosphere(o2_missing=True),
+        "fleet": fleet,
+        "orders": SimpleNamespace(
+            list_orders=lambda: current, list_upcoming_orders=lambda: upcoming
+        ),
+        "comms": bus.as_component(),
+    }
+
+
+@pytest.mark.parametrize("width, height", CARD_SIZES)
+@pytest.mark.parametrize("card", CARD_FILES)
+def test_card_draws_inside_its_card(card, width, height):
+    panel = _run(card, FakePanel(width=width, height=height), **_busy_game())
+
+    for name, args, _ in panel.calls:
+        if name == "draw_text":
+            x, y, text, size = args[0], args[1], args[2], args[3]
+            assert y <= height, (card, text)
+            assert x + len(text) * size * TEXT_EM <= width, (card, text)
+        elif name == "progress_bar":
+            x, y, bar_w, bar_h = args[0], args[1], args[2], args[3]
+            assert x + bar_w <= width and y + bar_h <= height, (card, args)
+        elif name == "status_dot":
+            x, y, radius = args[0], args[1], args[2]
+            assert x + radius <= width and y + radius <= height, (card, args)
