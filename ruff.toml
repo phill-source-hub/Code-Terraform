@@ -27,6 +27,8 @@ ignore = []
 # Owner-written game scripts, copied verbatim (not ours to edit). Same injected names as above.
 "scripts/owner/**" = ["F821"]
 "scripts/automations/**" = ["F821"]
+# Probes are run in game on a rover or machine slot, so they also use the injected `self`.
+"scripts/probes/**" = ["F821"]
 
 [format]
 quote-style = "double"

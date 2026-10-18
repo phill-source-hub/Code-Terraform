@@ -355,3 +355,100 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 |------|--------------|--------|-------|
 | 2026-10-18 | fe9a45c | SYNCED | `heater_1.py` written to the game (owner go-ahead). Replaced the 7-byte "Help me" placeholder. Game file matches repo. Pending a heater placed and the H-001 to H-005 checks. |
 | 2026-10-18 | fe9a45c | PASS (H-005) | Owner: script stopped, heater power read 0. H-001 to H-004 still open. |
+
+## Rover (spec `docs/specs/rover.md`, branch feat/rover-survey-mine)
+
+### R-001: Library and script load (`rover_1`, `charging_station_1`)
+
+- Where it runs: Library `rover_plan` (created in game, Ship > Computer > Library, name `rover_plan`), machines `rover_1` and `charging_station_1`.
+- Setup: rover with Nav, Sonar and Drill mounted, parked at base. Charging Station at base, powered.
+- Run: Run Script in Game on `rover_1` and `charging_station_1`.
+- Expected: no `ModuleNotFoundError`. `rover_1` shows status `survey stop N of M`.
+- Pass: `tasks.ps1 status` shows both scripts running and no error in the last 200 log lines.
+- Fail signs: `No module named 'rover_plan'` (Library not created or misnamed).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | PASS | `rover_1` running after the Library was created (survey stop 1 of 961 on screen). Earlier `No module named 'rover_plan'` was before the Library existed. |
+
+### R-002: Survey and map save (`rover_1`)
+
+- Setup: R-001 passed. Data Archive unlocked.
+- Expected: one stop per grid point (`survey stop N of M`, M = 961 at first run). Each stop prints scan results. Unresolved contacts are visited once. At the end the console prints `map: <contacts> contacts, <sites> sites`.
+- Pass: the survey completes with no `scan <status>` warnings other than partial statuses. `rover.map` appears in Computer > Data Archive with `base` at x 0, y 0 and the contacts and sites lists.
+- Timing note: 961 stops at about 50 m/h takes a long game time. Record the start and end time, and the battery levels at each refill.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Running, stop 1 of 961 at battery 94%. |
+
+### R-003: Drill swap at base (`rover_1`)
+
+- Setup: Base Inventory holds a `drill_module_industrial` (or `drill_module_heavy`). Rover parked at base with a basic drill mounted.
+- Expected: after the first unload at base, the rover unmounts the basic drill and mounts the higher tier. Status `mount ... slot_not_compatible` if the slot type refuses it; the rover keeps the old drill.
+- Pass: `modules()` shows the higher tier in the drill slot, or the refusal is logged and the rover keeps mining.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-004: Mining and unload (`rover_1`)
+
+- Setup: R-002 passed (surveyed mineral site exists). Auto Feeders researched.
+- Expected: `mining <site id> (<item>)` status, then `mined <N> from <site id>`. At base, the rover prints nothing for a successful unload; a warning appears only on failure.
+- Pass: ore is in Inventory after the trip (`inventory.count(<item>)` rises by the mined amount). Cargo count returns to 0.
+- Fail signs: `unload no_connection`, `unload not_at_target`, `unload partial`. Paste the message.
+- Open probe: the drill's `not_at_site` tolerance. If `mine` returns `not_at_site`, paste the status line and the rover position.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-005: Recharge at base (`rover_1`, `charging_station_1`)
+
+- Setup: rover low on charge (or run until it returns), docked in the Charging Station's service area.
+- Expected: `charging_station_1` queues the docked rover to 100%. The rover status reads `charging at base: N%` until 90%, then resumes.
+- Pass: the rover's battery rises to about 100%, and the rover leaves base only after 90%.
+- Fail signs: `no charge at base; check the Charging Station` (warning). Check the station's queue with `status(vehicle_id)` and the station's warnings.
+- Measure: Wh used per metre on the first leg. Record the start and end battery levels with the distance driven. Compare with the 0.05 Wh/m default.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-006: Rescue drone (`charging_station_1`, `rover_1`)
+
+- Setup: rover in the field with charge run down until it strands (or move it with the drive and let the battery drain). Charging station at base powered, not already rescuing.
+- Expected: within one poll (5 s) the station sets status `rescue drone sent to rover_1`. The rover shows `being_rescued`, holds position, and its route continues once charged. The rover's log shows no `stalled` survey skip.
+- Pass: the drone reaches the rover, the rover charges and resumes its leg, and no second drone goes out while the first is out.
+- Fail signs: `rescue rover_1 <status>: <message>` (a refusal, shown once). Paste the message.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | PASS | Rover stranded at about 10% away from base; station dispatched the drone (`rescue drone sent to rover_1`). Drone charged the rover where it stood, and the rover resumed and returned to base. |
+
+### R-007: Map markers (`rover_1`, Cartography)
+
+- Setup: Cartography research unlocked (`get_component("markers")` is not None). Rover running.
+- Expected: a `Base` marker at 0, 0 (icon star). After each survey visit, one marker per contact with id `survey.rover_1.c:<x>:<y>`: resource (green) for minerals, circle (grey) for inert, warning (amber, label `blocked`) for contacts the sonar could not classify.
+- Pass: marker count rises with each visit and does not double on a restart (the same ids are rewritten). No `marker ...` warnings.
+- Fail signs: `marker limit_reached` warning (256-marker cap, map full); `marker invalid_key` (id not accepted; paste it).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-008: Rover speed and energy probe (`scripts/probes/probe_rover_range.py`)
+
+- Setup: rover parked at base, battery at or above 90%, charging station at base. Stop the rover's main script first; two scripts cannot drive one rover.
+- Run: Run Script in Game on `rover_1` with the probe's contents. Do not save over `rover_1.py`. If the editor saves, re-sync `rover_1` afterwards.
+- Route: base to 30 m out and back, at throttle 0.3, 0.5 and 1.0. About 360 m in total. The rover stops itself.
+- Expected console: `start: game hours ...`, then six `leg throttle ...` lines (out and back at each throttle), three `summary throttle ...` lines, then `end: game hours ...`.
+- Record for each leg: metres, game hours, m/h, Wh used, Wh per metre, mean get_speed, end battery.
+- Record for each throttle: Wh per metre and m/h from the summary. The range per charge in the summary is extrapolated (100 Wh divided by Wh per metre), not driven.
+- Fail signs: `ABORT:` lines (battery floor or tick limit). Paste the full output.
+- Restart the rover's main script afterwards.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | PASS | Log (all.log, 18:14-18:16 UTC): throttle 0.3: 30 m/h, 0.06 Wh/m, range about 1667 m. Throttle 0.5: 50 m/h, 0.10 Wh/m, range about 1000 m (20 h). Throttle 1.0: 100 m/h, 0.20 Wh/m, range about 500 m (5 h). Speed is 100 x throttle m/h; energy is 0.2 x throttle Wh/m. Probe took 3.6 game hours; battery ended at 80%. Ranges are extrapolated from 28 m legs. |
