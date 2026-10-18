@@ -228,3 +228,11 @@ Short, newest last. Format: date, decision, why.
 - Why: the slot files differed only in one docstring token, so the template and renderer existed only to keep identical files equal. A plain copy has no generator and no drift.
 - Supersedes: ADR-027 (the renderer and templates).
 - Status: repo side done. Owner accepted two pressure observations on 2026-10-18: a rejected sync is not retried within the sweep (the first sync counts, per the manual), and the loop has no sleep. o2gen rejected-call warnings now print once per status change (a clean pass resets them), so a stuck fault does not flood the log. Sync: o2gen and pressure synced 2026-10-18. `pressure_1` and `pressure_2` had a stale sync record (their game text was the pre-change version); the owner approved the overwrite and the record was corrected to the game's hash before writing.
+
+## ADR-035: Heater finds each thermal state's best power in game and holds it
+
+- Date: 2026-10-18
+- Decision: `scripts/main/heater_1.py` is a self-contained controller (ADR-034 style, no imports). The manual gives no optimum per `thermal_state()`, so the script scans 0.1-10.0 in 0.1 steps for each state it has not seen, keeps the first probe that reads 100% (within 0.5), and reuses it on later days. A scan that sees the state change mid-scan is discarded. A rejected probe aborts the scan and retries next pass, so it is never read as a missing peak.
+- Why: the owner's brief asks the script to find the values, and efficiency is the only signal the manual gives. Each state has its own peak, and the day can change, so the state is read on every pass rather than once.
+- Trade-offs: the table lives in the script run only, so a reload repeats the scan (about 100 probes, roughly 100 game seconds per unseen state). The 0.1 step and the one-second settle are guesses until in-game checks H-001 to H-003 pass.
+- Status: repo side done, unit tests in `tests/test_heater_script.py`. Game side UNVERIFIED until the owner's sync go-ahead and the checklist in `docs/in-game-test-log.md` (heater_1).

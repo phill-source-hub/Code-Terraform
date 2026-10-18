@@ -341,3 +341,17 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 23:08Z+ | fe9a45c | PASS (owner) | `pacing` Library present; `scanner_1` restarted on the new code; `harvester_1` and `automation_1` updated. Owner reports base alerts clear. Remaining alert was `power deficit` at night: solar output is zero, so the deficit is expected, not a fault. |
+
+## heater_1 (Heat Generator, spec docs/specs/heater.md, branch feat/heater-controller)
+
+- Where it runs: machine `heater_1` (Mk I Heat Generator). Needs the heater placed and powered.
+- Check H-001 (settle time, UNVERIFIED): run the script on a state with a known optimum. Efficiency read one second after each `set_power` should match the value read at once. If not, raise `SETTLE_SECONDS` and log it here.
+- Check H-002 (scan): on the first day, the console prints `best power for <state>: <N>` once per state seen. Efficiency then reads 100% at that power. Record the optimum for each state.
+- Check H-003 (step size, UNVERIFIED): confirm the peak is hit at a 0.1 step. If `no power reached 100%` appears for a state, probe finer steps by hand and log the value.
+- Check H-004 (day change): after midnight, the status line shows the new state and the power changes to that state's value. No scan runs for a state already logged.
+- Check H-005 (power off): stop the script. The heater reads power 0.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | SYNCED | `heater_1.py` written to the game (owner go-ahead). Replaced the 7-byte "Help me" placeholder. Game file matches repo. Pending a heater placed and the H-001 to H-005 checks. |
+| 2026-10-18 | fe9a45c | PASS (H-005) | Owner: script stopped, heater power read 0. H-001 to H-004 still open. |
