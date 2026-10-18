@@ -14,11 +14,20 @@ RUNWAY_CRITICAL_HOURS = 1.0
 
 # Statuses from the stub's VehicleRef / DroneRef. Red needs a rescue or a fix now; amber is a
 # wait the player may want to see.
-RED_STATUSES = frozenset(
-    {"stranded", "scrambled", "stalled_no_battery", "stalled_no_oil", "stalled_no_route"}
+# Tuples, not sets: the game has no set or frozenset builtin (only the names in the stub).
+RED_STATUSES = (
+    "stranded",
+    "scrambled",
+    "stalled_no_battery",
+    "stalled_no_oil",
+    "stalled_no_route",
 )
-AMBER_STATUSES = frozenset(
-    {"waiting_service", "waiting_oil", "waiting_bay", "holding_weather", "being_rescued"}
+AMBER_STATUSES = (
+    "waiting_service",
+    "waiting_oil",
+    "waiting_bay",
+    "holding_weather",
+    "being_rescued",
 )
 
 CHANNEL_MAX_LENGTH = 64
