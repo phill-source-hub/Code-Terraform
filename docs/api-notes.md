@@ -59,6 +59,13 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 - Data Archive keys: 1 to 96 characters, ASCII letters, digits, `_`, `.`, `:`, `-`. Values are JSON-safe, at most 8 nested levels and 16,384 nodes. The store holds up to 2,048 entries. `set`, `delete` and `transaction` return `ActionResult`. `get`, `has` and `keys` return natural values.
 - Item flow through machine ports does nothing until Auto Feeders research is done (manual, FAQ). Scripts must move items themselves until then.
 
+## Heat Generator (Mk I, `heater_1`, VERIFIED docs, build fe9a45c)
+
+- VERIFIED (docs): `set_power(watts)` takes 0-10 and clamps outside that; `0` turns heating off. The setting returns to 0 when the script stops.
+- VERIFIED (docs): `thermal_state()` returns `"clear"`, `"dust_storm"`, `"heat_bleed"` or `"dust_veil"`, and it changes only on a new day.
+- VERIFIED (docs): `efficiency()` reads 100% only at the state's optimum, about 31% one step away, and 10% further out. The optimum values are not in the manual.
+- UNVERIFIED: the step size of the peak, and whether `efficiency()` updates at once after `set_power`. `heater_1` waits one second after each probe. Checks H-001 to H-003 in `docs/in-game-test-log.md`.
+
 ## Known game-vs-Ruff difference (log evidence)
 
 - VERIFIED (ingame log, 2026-10-17 15:46): the game reported `SyntaxError: invalid syntax at '/='` for an `oxygen_sensor.py` script at line 4. The owner's current file no longer contains `/=`, so the exact construct the game rejects is UNVERIFIED. Probe before relying on augmented assignment with `/=`.

@@ -69,6 +69,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | bio_exchange_1 | Fill open Bio Orders (several required fragments) from Inventory samples; returns surplus to Inventory (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
 | o2gen_1 | Intake CO2/10, dump waste only in 50-60, last resort at 90 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
+| heater_1 | Scan 0.1-10.0 once per thermal state for the power that reads 100%, then hold it (ADR-035) | machine `heater_1` (Mk I Heat Generator) | Unit tests only; L3 pending (H-001 to H-005) |
 | solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; imports the `solar_tracker` Library | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001); lib import L3 pending |
 | relay_hack (contract) | Orbital Relay Hack; imports the `relay_solver` Library (ADR-030) | contract `relay_hack` | Done (C-001 PASS); lib import L3 pending |
 | xenogenetics (contract) | Transmit samples not in Earth reference | contract `xenogenetics` | Done (X-001 PASS) |
