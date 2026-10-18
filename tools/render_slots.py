@@ -29,6 +29,8 @@ SLOTS = {
     "solar_1": "solar_slot.py",
     "solar_2": "solar_slot.py",
     "solar_3": "solar_slot.py",
+    "solar_4": "solar_slot.py",
+    "solar_5": "solar_slot.py",
     "pressure_1": "pressure_slot.py",
     "pressure_2": "pressure_slot.py",
     "pressure_3": "pressure_slot.py",

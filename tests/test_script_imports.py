@@ -55,6 +55,6 @@ def test_library_never_uses_self_or_panel(library):
             assert node.id not in {"self", "panel"}, f"{library.name}:{node.lineno}"
 
 
-def test_both_solar_slots_still_have_a_script():
-    assert (ROOT / "scripts" / "main" / "solar_1.py").is_file()
-    assert (ROOT / "scripts" / "main" / "solar_2.py").is_file()
+@pytest.mark.parametrize("slot", ["solar_1", "solar_2", "solar_3", "solar_4", "solar_5"])
+def test_every_solar_slot_still_has_a_script(slot):
+    assert (ROOT / "scripts" / "main" / f"{slot}.py").is_file()
