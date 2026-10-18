@@ -135,7 +135,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | PASS (owner) | Collects only for the Bio Order the Exchange is working on (status `order: ms_chelicera`); counts stock in Inventory and in-flight units; explores only while a biome type is missing from the Journal. Found and fixed during test: status overflow stopped the script (240-char limit), and collecting for all open orders. |
 
 ### B-002: Bio Lab (`bio_lab_1`)
 
@@ -152,7 +152,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | Owner report, not logged step by step | Exchange no_input loop fixed (sample returned with warning). Owner reports the Chelicera order flow works end to end. Re-run B-002 restart and no-credits tests to close it. |
 
 ### B-003: Bio Exchange (`bio_exchange_1`)
 
@@ -166,7 +166,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | Owner report, not logged step by step | Owner reports the Exchange order flow works end to end. Re-run the restart test and the multi-fragment order to close it. |
 
 ## Contracts
 
