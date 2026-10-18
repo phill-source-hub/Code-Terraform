@@ -29,6 +29,8 @@ ignore = []
 "scripts/automations/**" = ["F821"]
 # Probes run in game on a machine or a Control Room card, so they use the injected `self` or `panel`.
 "scripts/probes/**" = ["F821"]
+# Control Room cards are pasted into the game and use the injected `panel` and `get_component`.
+"scripts/cards/**" = ["F821"]
 
 [format]
 quote-style = "double"

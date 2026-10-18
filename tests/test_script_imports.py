@@ -17,6 +17,7 @@ GAME_SCRIPTS = sorted(
         *(ROOT / "scripts" / "main").glob("*.py"),
         *(ROOT / "scripts" / "contracts").glob("*.py"),
         *(ROOT / "scripts" / "automations").glob("*.py"),
+        *(ROOT / "scripts" / "cards").glob("*.py"),
     ]
 )
 LIBRARIES = sorted(LIBS.glob("*.py"))
