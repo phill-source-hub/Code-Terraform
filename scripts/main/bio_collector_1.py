@@ -23,7 +23,7 @@ Assumption (UNVERIFIED, docs/api-notes.md): another script can read bio_lab_1.sp
 API facts relied on (docs/game/biology.md): self.scan(), self.collect(coords), self.cargo,
     self.outpost.biome, FragmentLocation .coords .distance .cataloged .fragment_id,
     Specimen .coords .fragment_id, BioOrder .id .biome .status .requires .delivered .in_transit,
-    bio_exchange.orders(), inventory.count(item_id), journal.cataloged_fragments(planet_id),
+    bio_exchange.active_order(), inventory.count(item_id), journal.cataloged_fragments(planet_id),
     get_component, set_status, print, sleep.
 """
 
@@ -291,9 +291,14 @@ while True:
     inventory = get_component("inventory")
     lab = get_component(LAB_ID)
 
+    # Only the Bio Order the Exchange is working on. Other open orders are served when the
+    # Exchange moves to them, so collecting for all of them sends the collector after fragments
+    # no delivery is waiting for.
     orders = []
     if exchange is not None:
-        orders = open_orders(exchange.orders(), self.outpost.biome)
+        active = exchange.active_order()
+        if active is not None:
+            orders = open_orders([active], self.outpost.biome)
     journal = get_component(JOURNAL_ID)
     entries = journal_entries(journal)
     dots = known_dots(entries)

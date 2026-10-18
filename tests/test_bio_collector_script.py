@@ -30,9 +30,11 @@ def loc(coords, cataloged=False, fragment_id=None, distance=1.0):
     )
 
 
-def order(requires, delivered=None, in_transit=None, status="active", biome=BIOME):
+def order(
+    requires, delivered=None, in_transit=None, status="active", biome=BIOME, order_id="order"
+):
     return SimpleNamespace(
-        id="order",
+        id=order_id,
         biome=biome,
         status=status,
         requires=requires,
@@ -43,6 +45,14 @@ def order(requires, delivered=None, in_transit=None, status="active", biome=BIOM
 
 def specimen(coords, fragment_id=None):
     return SimpleNamespace(coords=coords, fragment_id=fragment_id)
+
+
+def _active(orders):
+    """The Exchange's active order: the first open one, as the Exchange would assign it."""
+    for candidate in orders:
+        if candidate.status != "complete":
+            return candidate
+    return None
 
 
 def setup(
@@ -75,7 +85,10 @@ def setup(
         game.components["bio_exchange_1"] = FakeComponent(
             id="bio_exchange_1",
             type_id="bio_exchange",
-            methods={"orders": lambda: list(orders)},
+            methods={
+                "orders": lambda: list(orders),
+                "active_order": lambda: _active(orders),
+            },
         )
     if journal_ids is not None or journal_dots:
         # Placeholder coords far from every scan dot, unless the test gives real ones.
@@ -213,6 +226,17 @@ def test_a_needed_type_is_targeted_at_its_journal_coords_when_the_scan_hides_it(
         journal_ids=FROZEN,
         journal_dots=[("ms_chelicera", [8.0, 8.0])],
     )
+    assert first_collect(owner, game) == [8.0, 8.0]
+
+
+def test_collects_only_for_the_order_the_exchange_is_working_on():
+    # Regression: the collector served all 13 open orders, so it collected Aperture Lip for an
+    # order the Exchange was not working on. Only the active order counts.
+    locations = [loc([3.0, 4.0], True, "hc_aperture_lip"), loc([8.0, 8.0], True, "ms_chelicera")]
+    waiting = order({"hc_aperture_lip": 2}, order_id="waiting")
+    active = order({"ms_chelicera": 1}, order_id="active")
+    owner, game = setup(locations, orders=[active, waiting])
+    game.components["bio_exchange_1"].methods["active_order"] = lambda: active
     assert first_collect(owner, game) == [8.0, 8.0]
 
 
