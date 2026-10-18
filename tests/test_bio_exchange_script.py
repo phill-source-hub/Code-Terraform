@@ -125,6 +125,7 @@ class FakeExchange:
         self.output_stacks = [stack(s.id, s.count, s.properties) for s in output_stacks]
         self.actions: list = []
         self.budget = budget
+        self.deliver_refuses = False
         self.input = _Input(self)
         self.output = _Output(self)
 
@@ -189,6 +190,8 @@ class FakeExchange:
 
     def deliver(self):
         self.tick("deliver")
+        if self.deliver_refuses:
+            return status("no_input")
         if self.active_id is None:
             return status("no_active")
         order = self.orders_by_id[self.active_id]
@@ -246,6 +249,20 @@ def test_fills_a_multi_item_order_one_fragment_at_a_time_until_it_is_complete():
     assert order.delivered == {"gw_a": 1, "gw_b": 1}
     assert exchange.input_stacks == []
     assert exchange.inventory == []
+
+
+def test_a_staged_sample_deliver_refuses_is_returned_not_retried_forever():
+    # Regression: no_input was treated as transient, so the same staged sample was retried
+    # every few seconds and the Exchange input stayed full.
+    order = bio_order("o1", "Frozen Census", {"gw_a": 2})
+    # Budget 3: deliver, eject, then the 60 s pause. The run ends before the next restage.
+    exchange = FakeExchange([order], active="o1", input_stacks=[stack("gw_a", 3)], budget=3)
+    exchange.deliver_refuses = True
+    game = drive(exchange)
+    assert exchange.actions[:3] == ["deliver", "input.eject", "sleep"]
+    assert exchange.input_stacks == []
+    assert stock(exchange, "gw_a") == 3
+    assert ("deliver no_input for gw_a: returned to Inventory", "warn") in game.statuses
 
 
 def test_a_restart_with_a_staged_sample_delivers_it_instead_of_getting_stuck():

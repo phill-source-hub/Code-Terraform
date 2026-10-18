@@ -29,7 +29,9 @@ API facts relied on (docs/game/biology.md, manual Bio Exchange and BioOrder): se
 PAUSE_SECONDS = 60
 RETRY_SECONDS = 5
 INPUT_CAPACITY = 10
-TRANSIENT = ("busy", "no_input", "output_full", "source_changed", "target_changed")
+# no_input is not transient: the input lists a sample that deliver() will not take, so
+# retrying the same stack loops forever. It is handled by returning the stack (see below).
+TRANSIENT = ("busy", "output_full", "source_changed", "target_changed")
 
 
 def remaining(order, fragment_id):
@@ -151,6 +153,20 @@ while True:
             set_status("delivered toward " + order.name, "info")
         elif delivered.status in TRANSIENT:
             wait("deliver " + delivered.status)
+        elif delivered.status == "no_input":
+            # Hand the staged sample back so the input is free, and say why. The pause keeps a
+            # refused sample from being restaged every few seconds.
+            stuck = accepted_stack(self, self.input.stacks())
+            if stuck is None:
+                wait("deliver no_input")
+            else:
+                returned = self.input.eject(
+                    "inventory", stuck.id, stuck.count, stuck.properties, "exact"
+                )
+                if returned.status in ("ok", "partial"):
+                    blocked("deliver no_input for " + stuck.id + ": returned to Inventory")
+                else:
+                    blocked("deliver no_input, return failed: " + returned.status)
         else:
             blocked("deliver " + delivered.status + ": " + delivered.message)
         continue
