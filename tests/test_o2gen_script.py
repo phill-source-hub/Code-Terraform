@@ -24,8 +24,12 @@ def run(
     dump_penalty=0.0,
     intake_status="ok",
     atmosphere=True,
+    intake_statuses=None,
 ):
-    """Run the script. waste_values is a list read once per pass (the last value repeats)."""
+    """Run the script. waste_values is a list read once per pass (the last value repeats).
+
+    intake_statuses, when given, is the set_intake status per call (the last one repeats).
+    """
     passes = passes or len(waste_values)
     intakes: list[float] = []
     dumps: list[int] = []
@@ -41,8 +45,11 @@ def run(
         # Stop at the start of pass passes+1, so pass `passes` runs to its end.
         if len(intakes) >= passes:
             raise _Stop
+        status = intake_status
+        if intake_statuses:
+            status = intake_statuses[min(len(intakes), len(intake_statuses) - 1)]
         intakes.append(value)
-        return SimpleNamespace(status=intake_status, message="")
+        return SimpleNamespace(status=status, message="")
 
     def dump_waste():
         dumps.append(1)
@@ -194,3 +201,38 @@ def test_no_last_resort_dump_below_ninety():
     game, _, dumps = run([89.0], passes=1)
     assert dumps == []
     assert any("is above 60" in line for line in game.printed)
+
+
+def test_rejected_intake_warns_once_while_the_fault_lasts():
+    game, _, _ = run([10.0, 10.0, 10.0], intake_status="offline", passes=3)
+    assert game.printed.count("warning: set_intake offline\n") == 1
+
+
+def test_rejected_intake_warns_again_after_a_clean_pass():
+    game, _, _ = run(
+        [10.0, 10.0, 10.0],
+        intake_statuses=["offline", "ok", "offline"],
+        passes=3,
+    )
+    assert game.printed.count("warning: set_intake offline\n") == 2
+
+
+def test_rejected_intake_warns_when_the_status_changes():
+    game, _, _ = run(
+        [10.0, 10.0],
+        intake_statuses=["offline", "not_enough_power"],
+        passes=2,
+    )
+    assert "warning: set_intake offline\n" in game.printed
+    assert "warning: set_intake not_enough_power\n" in game.printed
+
+
+def test_rejected_dump_warns_once_while_the_fault_lasts():
+    game, _, dumps = run([55.0, 55.0, 55.0], dump_status="busy", passes=3)
+    assert len(dumps) == 3
+    assert game.printed.count("warning: dump busy\n") == 1
+
+
+def test_rejected_last_resort_dump_warns_once_while_the_fault_lasts():
+    game, _, _ = run([92.0, 92.0], dump_status="busy", passes=2)
+    assert game.printed.count("warning: last-resort dump busy\n") == 1

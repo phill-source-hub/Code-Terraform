@@ -27,7 +27,7 @@ Scripting repo for the game Code: Terraform (Steam 868160, AppsMafia). Pet proje
 
 - `scripts/main/` per-machine programs, file named as the machine id (game root `<id>.py`).
 - `scripts/libs/` shared Libraries (game `lib/<name>.py`).
-- `scripts/templates/` shared controllers with a `__SLOT__` token; `tools/render_slots.py` generates `scripts/main/<slot>.py` (ADR-027). Edit the template, never the generated file.
+- Controllers shared by several slots (solar, o2gen, pressure) are one file: the family's `_1` file is the source, copied to each other slot (ADR-033, ADR-034). Edit the `_1` file, then copy it to every sibling; `tests/test_controller_copies.py` fails on any difference.
 - `scripts/probes/` one-off probe scripts for UNVERIFIED facts.
 - `scripts/contracts/` contract scripts (game root). `scripts/automations/` Automations (game Ship Computer > Automations), not synced: paste them in game (README).
 - `docs/specs/` feature specs. `docs/game/manual/` local manual copy (git-ignored).

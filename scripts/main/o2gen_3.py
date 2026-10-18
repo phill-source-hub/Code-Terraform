@@ -1,6 +1,8 @@
 """Oxygen generator controller: peak efficiency, waste dumped only inside 50-60, no penalty.
 
-Where it runs: machine script slot `o2gen_3` (self = this generator). Mk I.
+Where it runs: every Mk I oxygen generator slot, including ones added later. The same file
+    runs on each one; `self` is the generator it runs on, so the file names no slot
+    (ADR-034). Copy it to add one; do not edit a copy by hand.
 Self-contained on purpose (ADR-014): no imports.
 Rules (manual, Oxygen Generator and Atmosphere):
     peak intake is exactly CO2 / 10 (ppt); efficiency is 100% at peak with waste at or below 60;
@@ -23,12 +25,18 @@ DUMP_HIGH = 60
 # and burns game time on the missing-atmosphere branch (CLAUDE.md: every loop needs a sleep).
 PASS_SECONDS = 1
 # Last resort: waste this high is close to the stall at 100. A dump here takes the penalty,
-# which is accepted only to keep the generator running. Owner-set; not a manual value.
+# which is accepted only to keep the generator running. Owner-accepted failsafe (2026-10-18);
+# the value is not from the manual.
 LAST_RESORT = 90
 
 atmosphere = get_component("atmosphere")
 last_status = None
 above_warned = False
+# A rejected call repeats every pass while its cause lasts. Each one warns when its status changes,
+# and warns again after a clean pass, so the log shows each new fault once.
+last_intake_status = None
+last_dump_status = None
+last_last_resort_status = None
 
 while True:
     if atmosphere is None:
@@ -38,8 +46,9 @@ while True:
 
     intake = atmosphere.get_co2() / 10
     setting = self.set_intake(intake)
-    if setting.status != "ok":
+    if setting.status != "ok" and setting.status != last_intake_status:
         print("warning: set_intake " + setting.status)
+    last_intake_status = setting.status
 
     waste = self.waste()
     if DUMP_LOW <= waste <= DUMP_HIGH:
@@ -48,16 +57,18 @@ while True:
             print("dumped waste at " + str(round(waste, 1)) + ", penalty " + str(dumped.penalty))
             if dumped.penalty != 0:
                 print("warning: dump at " + str(round(waste, 1)) + " reported a penalty")
-        else:
+        elif dumped.status != last_dump_status:
             print("warning: dump " + dumped.status)
+        last_dump_status = dumped.status
     elif waste >= LAST_RESORT:
         dumped = self.dump_waste()
         if dumped.status == "ok":
             print(
                 "LAST RESORT dump at " + str(round(waste, 1)) + ", penalty " + str(dumped.penalty)
             )
-        else:
+        elif dumped.status != last_last_resort_status:
             print("warning: last-resort dump " + dumped.status)
+        last_last_resort_status = dumped.status
     elif waste > DUMP_HIGH and not above_warned:
         print(
             "warning: waste "

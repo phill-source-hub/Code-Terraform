@@ -8,9 +8,9 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 |-----------|-------------|-------|
 | `bio_collector_1.py`, `bio_exchange_1.py`, `bio_lab_1.py` | `scripts/main/` | same |
 | `corrupted_archive.py`, `data_tablet.py`, `terminal_breach.py`, `xenogenetics.py` | `scripts/contracts/` | same |
-| `pressure_1.py`, `pressure_2.py` | `scripts/main/` (generated from `scripts/templates/pressure_slot.py`) | same |
+| `pressure_1.py`, `pressure_2.py`, `pressure_3.py` | `scripts/main/` (copies of `pressure_1.py`, ADR-034) | Synced 2026-10-18 (docstring change; code unchanged). |
 | `scanner_1.py` | `scripts/main/` | same since the 2026-10-17 apply |
-| `solar_4.py`, `solar_5.py` | `scripts/main/` (generated from `scripts/templates/solar_slot.py`) | Were `Help me` placeholders; replaced by the owner-approved sync on 2026-10-18. Same code as `solar_3`. |
+| `solar_4.py`, `solar_5.py` | `scripts/main/` (plain copies of `solar_1.py`, ADR-033) | Were `Help me` placeholders; replaced by the owner-approved sync on 2026-10-18. Now identical to `solar_1.py`; re-synced to the game 2026-10-18 (hash matches). |
 | `lib/*.py` (7 files) | `scripts/libs/` | `power_status`, `relay_solver`, `solar_tracker`, `grid`, `trip_log`, `job_queue`, `base_watch` |
 
 ## Tracked, game copy differs (sync conflict, skipped)
@@ -18,7 +18,7 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 | Game file | Repo source | State in game |
 |-----------|-------------|---------------|
 | `harvester_1.py` | `scripts/main/harvester_1.py` | Game holds the old power-monitor copy on this slot (ADR-017 era). Owner decision needed. |
-| `o2gen_1.py` | `scripts/main/o2gen_1.py` (generated) | Older version, no `sleep` (ADR-024 change not in game). |
+| `o2gen_1.py`, `o2gen_2.py`, `o2gen_3.py` | `scripts/main/o2gen_1.py` (source; copies byte-identical, ADR-034) | Synced 2026-10-18 (sleep and warn-once). |
 | `relay_hack.py` | `scripts/contracts/relay_hack.py` | Older self-contained copy. |
 | `solar_1.py`, `solar_2.py` | `scripts/main/` (generated) | Older self-contained copies. |
 | `solar_3.py` | `scripts/main/solar_3.py` (generated, slot added 2026-10-17) | Copy of the solar code, docstring says `solar_2`. Not written by sync. |

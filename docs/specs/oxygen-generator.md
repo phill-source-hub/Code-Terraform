@@ -12,6 +12,6 @@ Status: revised 2026-10-17 to the owner's requirements. Source: owner-supplied i
 
 ## Open questions (owner)
 
-- Last-resort threshold: 90 is a judgement, not a manual value. Confirm or change LAST_RESORT in `scripts/main/o2gen_1.py`.
+- Last-resort threshold: 90 is an owner-accepted failsafe, not a manual value (accepted 2026-10-18). Waste above 60 is not dumped until 90; at 90 the dump takes the penalty so the generator does not stall at 100. Value in `scripts/main/o2gen_1.py`.
 - Option (b), lowering intake near 60 to slow new waste, and option (c), pausing the generator, are not implemented.
 - The loop runs without pacing, so the game's own step budget sets the sampling rate. Check in game that waste is dumped inside 50-60 each time, and never jumps past 60 between reads.

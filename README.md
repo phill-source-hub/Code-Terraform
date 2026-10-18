@@ -48,7 +48,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 |------|----------|
 | `scripts/main/` | per-machine programs (file name = machine id) |
 | `scripts/libs/` | shared Libraries (game `lib/`) |
-| `scripts/templates/` | one template per controller shared by several slots; `tools/render_slots.py` writes `scripts/main/<slot>.py` from it (ADR-027). Edit the template, then run `python tools/render_slots.py` |
+| `scripts/main/` (solar, o2gen, pressure) | one file per controller, copied to each slot; the `_1` file is the source. Copy it to add a slot (ADR-033, ADR-034). `tests/test_controller_copies.py` checks the copies match |
 | `scripts/contracts/` | contract scripts (game root) |
 | `scripts/automations/` | Automations (game: Ship Computer > Automations). Not synced: paste the file into a new Automation in game |
 | `scripts/probes/` | probe scripts that check UNVERIFIED API facts |

@@ -56,6 +56,8 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | 2026-10-17 (night) | fe9a45c | PARTIAL PASS | Night check: status `tilt 90.0 deg`, script `solar_1` running, no new errors in log. Midday check still pending. |
 | 2026-10-17 (afternoon, 78° sun) | fe9a45c | PASS (tracking) | Tilt 11° vs rule 12°: within the sampling lag at 1/12-hour sampling. Output 43/50 W, efficiency 87%. |
 | 2026-10-17 (morning, 90° sun, sample 1/60 h) | fe9a45c | PASS | Tilt 0°, output 50/50 W, efficiency 100%. Rule holds exactly. Efficiency falls with lower sun elevation, not only with tilt error (UNVERIFIED model). |
+| 2026-10-18 (ADR-033 sync, one file on solar_1 to solar_5) | fe9a45c | PASS (owner report) | Owner reports all in-game checks completed successfully. Details not pasted into this log. |
+| 2026-10-18 (ADR-033 sync, one file on solar_1 to solar_5) | fe9a45c | PENDING | Synced 2026-10-18 on owner go-ahead; `status` shows all five solar slots running, no solar errors. Check: `self` is the generator on each slot (status `tilt <N> deg` on every slot, no `set_tilt` error), and `self.id` is not read by the script. UNVERIFIED: `self.id` on a machine script. |
 
 ## Scanner and harvester
 
@@ -94,6 +96,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
 - Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
 - Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
+- 2026-10-18 sync (ADR-034): `o2gen_1` to `o2gen_3` now run one shared file, with rejected-call warnings printed once per change. Check: no repeating `warning: set_intake` or `warning: dump` lines in the log while a fault lasts. Pressure sync (2026-10-18, owner-approved overwrite): `pressure_1` and `pressure_2` held the pre-change text (checked by hash), so their sync state was corrected and they were written. `pressure_1` to `pressure_3` now run one shared file; `status` shows all three running.
 - Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
 - Warning `waste <w> is above 60; not dumping until 90` means the window was missed. Waste between 60 and 90 waits.
 - At 90 or above the script takes a last-resort dump: `LAST RESORT dump at <w>, penalty <p>`. Paste it. A non-zero penalty is expected only here.
@@ -103,6 +106,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-17 (log 18:59 UTC) | fe9a45c | PARTIAL PASS | Log: `dumped waste at 50, penalty 0` twice (18:57, 18:59 UTC). No warnings or errors. Intake and efficiency not yet checked. |
+| 2026-10-18 (ADR-034 sync, o2gen_1 to o2gen_3) | fe9a45c | PASS (owner report) | Owner reports all in-game checks completed successfully. Details not pasted into this log. |
 | 2026-10-17 (panel) | fe9a45c | PASS | Intake 5000 ppt (status 4999.99) against CO2 about 50,000 ppt: CO2/10. Efficiency 100%, penalty 0, output 0.240 ppt/day (Mk I peak). Waste 34.4 and rising toward the next clean dump at 50. |
 
 ## Atmosphere (pressure)
@@ -118,7 +122,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 (ADR-034 sync, pressure_1 to pressure_3) | fe9a45c | PASS (owner report) | Owner reports all in-game checks completed successfully. Details not pasted into this log. |
 
 ## Biology (Bio Collector, Bio Lab, Bio Exchange)
 
