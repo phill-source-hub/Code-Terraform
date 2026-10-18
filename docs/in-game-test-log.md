@@ -437,3 +437,18 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        |       |
+
+### R-008: Rover speed and energy probe (`scripts/probes/probe_rover_range.py`)
+
+- Setup: rover parked at base, battery at or above 90%, charging station at base. Stop the rover's main script first; two scripts cannot drive one rover.
+- Run: Run Script in Game on `rover_1` with the probe's contents. Do not save over `rover_1.py`. If the editor saves, re-sync `rover_1` afterwards.
+- Route: base to 30 m out and back, at throttle 0.3, 0.5 and 1.0. About 360 m in total. The rover stops itself.
+- Expected console: `start: game hours ...`, then six `leg throttle ...` lines (out and back at each throttle), three `summary throttle ...` lines, then `end: game hours ...`.
+- Record for each leg: metres, game hours, m/h, Wh used, Wh per metre, mean get_speed, end battery.
+- Record for each throttle: Wh per metre and m/h from the summary. The range per charge in the summary is extrapolated (100 Wh divided by Wh per metre), not driven.
+- Fail signs: `ABORT:` lines (battery floor or tick limit). Paste the full output.
+- Restart the rover's main script afterwards.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
