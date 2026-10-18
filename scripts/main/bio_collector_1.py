@@ -166,26 +166,53 @@ def units_needed(orders, in_stock, pending):
     return needed
 
 
-def specimen_fragment(specimen, locations):
+def coords_key(coords):
+    # A string, not a tuple: tuple() is not in the game's builtins list.
+    return str(round(coords[0], 3)) + "," + str(round(coords[1], 3))
+
+
+def known_dots(entries):
+    """Map each identified dot's coords to its fragment id, from the Journal.
+
+    A scan dot is marked cataloged only once that dot itself is analysed. A dot whose fragment
+    type is already in the Journal can still show cataloged False, so the Journal's coords are
+    the only way to tell it apart from an unknown dot.
+    """
+    dots = {}
+    if entries is None:
+        return dots
+    for entry in entries:
+        dots[coords_key(entry.coords)] = entry.fragment_id
+    return dots
+
+
+def identity(location, dots):
+    """Fragment id of a scan dot, from the scan or else from the Journal. None when unknown."""
+    if location.cataloged:
+        return location.fragment_id
+    return dots.get(coords_key(location.coords))
+
+
+def specimen_fragment(specimen, locations, dots):
     """Fragment id of a specimen, or None while it is unidentified.
 
     A collected specimen reports no fragment until analysis, so its coords are matched against
-    the scan: a cataloged location at the same coords is the same fragment.
+    the scan: a dot with a known identity at the same coords is the same fragment.
     """
     if specimen is None:
         return None
     if specimen.fragment_id is not None:
         return specimen.fragment_id
     for location in locations:
-        if location.cataloged and location.coords == specimen.coords:
-            return location.fragment_id
+        if location.coords == specimen.coords:
+            return identity(location, dots)
     return None
 
 
-def pending_counts(specimens, locations):
+def pending_counts(specimens, locations, dots):
     counts = {}
     for specimen in specimens:
-        fragment_id = specimen_fragment(specimen, locations)
+        fragment_id = specimen_fragment(specimen, locations, dots)
         if fragment_id is not None:
             counts[fragment_id] = counts.get(fragment_id, 0) + 1
     return counts
@@ -202,11 +229,11 @@ def lab_specimen(lab):
         return None
 
 
-def cataloged_ids(journal):
-    """Fragment ids already in the Journal for this planet. None when the Journal is absent."""
+def journal_entries(journal):
+    """Journal entries for this planet, or None when the Journal is absent."""
     if journal is None:
         return None
-    return [entry.fragment_id for entry in journal.cataloged_fragments(PLANET_ID)]
+    return journal.cataloged_fragments(PLANET_ID)
 
 
 def exploring_can_help(biome, known):
@@ -220,14 +247,15 @@ def exploring_can_help(biome, known):
     return len(missing) > 0
 
 
-def pick_target(locations, needed, explore):
+def pick_target(locations, needed, explore, dots):
     for location in locations:
-        if location.cataloged and needed.get(location.fragment_id, 0) > 0:
+        fragment_id = identity(location, dots)
+        if fragment_id is not None and needed.get(fragment_id, 0) > 0:
             return location
     if not explore:
         return None
     for location in locations:
-        if not location.cataloged:
+        if identity(location, dots) is None:
             return location
     return None
 
@@ -263,15 +291,21 @@ while True:
     orders = []
     if exchange is not None:
         orders = open_orders(exchange.orders(), self.outpost.biome)
+    journal = get_component(JOURNAL_ID)
+    entries = journal_entries(journal)
+    dots = known_dots(entries)
+    known_types = None
+    if entries is not None:
+        known_types = [entry.fragment_id for entry in entries]
+    explore = exploring_can_help(self.outpost.biome, known_types)
+
     needed = units_needed(
         orders,
         stock_of(orders, inventory),
-        pending_counts([lab_specimen(lab)], locations),
+        pending_counts([lab_specimen(lab)], locations, dots),
     )
 
-    journal = get_component(JOURNAL_ID)
-    explore = exploring_can_help(self.outpost.biome, cataloged_ids(journal))
-    target = pick_target(locations, needed, explore)
+    target = pick_target(locations, needed, explore, dots)
     # Shown on the status line so a wrong pick can be traced to its inputs: the units still
     # short per fragment, and whether the pick is for an order or an exploration.
     reason = "short " + short_text(needed) + ", explore " + str(explore)

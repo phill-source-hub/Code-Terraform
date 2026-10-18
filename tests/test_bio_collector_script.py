@@ -55,6 +55,7 @@ def setup(
     collect_status="ok",
     with_exchange=True,
     journal_ids=None,
+    journal_dots=(),
 ):
     """Returns (owner, game)."""
     stock = stock or {}
@@ -76,8 +77,13 @@ def setup(
             type_id="bio_exchange",
             methods={"orders": lambda: list(orders)},
         )
-    if journal_ids is not None:
-        entries = [SimpleNamespace(fragment_id=fragment_id) for fragment_id in journal_ids]
+    if journal_ids is not None or journal_dots:
+        # Placeholder coords far from every scan dot, unless the test gives real ones.
+        entries = [
+            SimpleNamespace(fragment_id=fragment_id, coords=[900.0 + index, 900.0])
+            for index, fragment_id in enumerate(journal_ids or [])
+        ]
+        entries += [SimpleNamespace(fragment_id=fid, coords=coords) for fid, coords in journal_dots]
         game.components["journal"] = FakeComponent(
             id="journal",
             type_id="journal",
@@ -182,6 +188,31 @@ def test_status_stays_within_the_game_limit_when_many_fragments_are_short():
     run_loop(SCRIPT, game, owner)
     assert all(len(message) <= 240 for message, _ in game.statuses)
     assert game.statuses[0][0].startswith("collected order: gw_cranial_plate")
+
+
+def test_a_dot_whose_type_is_in_the_journal_is_not_explored_even_if_it_shows_uncataloged():
+    # Regression: the scan shows a dot as uncataloged until that dot is analysed, even when its
+    # type is already in the Journal. Its Journal coords identify it, so it is not explored.
+    locations = [loc([3.0, 4.0]), loc([8.0, 8.0])]
+    owner, game = setup(
+        locations,
+        journal_ids=FROZEN[:-1],
+        journal_dots=[("fs_calyx_plate", [3.0, 4.0])],
+    )
+    assert first_collect(owner, game) == [8.0, 8.0]
+
+
+def test_a_needed_type_is_targeted_at_its_journal_coords_when_the_scan_hides_it():
+    # Regression: Chelicera is known, but its dot shows uncataloged in the scan. The Journal
+    # coords identify the dot, so the order's need is met by that dot, not by exploration.
+    locations = [loc([3.0, 4.0]), loc([8.0, 8.0])]
+    owner, game = setup(
+        locations,
+        orders=[order({"ms_chelicera": 1})],
+        journal_ids=FROZEN,
+        journal_dots=[("ms_chelicera", [8.0, 8.0])],
+    )
+    assert first_collect(owner, game) == [8.0, 8.0]
 
 
 def test_an_open_order_still_collects_its_identified_fragment_when_all_are_known():
