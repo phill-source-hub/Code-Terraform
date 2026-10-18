@@ -95,7 +95,7 @@ A script is not Done until L1 (format and lint), L2 (pytest) and L3 (this log) p
 - Script: `scripts/main/o2gen_1.py` (spec: `docs/specs/oxygen-generator.md`). Applied 2026-10-17, replacing the `Help me` request.
 - Setup: generator powered (-8 W); CO2 reading available; Auto Feeders not needed (no item ports).
 - Run: Run Script in Game on `o2gen_1`. The loop runs continually (no sleep).
-- 2026-10-18 sync (ADR-034): `o2gen_1` to `o2gen_3` now run one shared file, with rejected-call warnings printed once per change. Check: no repeating `warning: set_intake` or `warning: dump` lines in the log while a fault lasts. Pressure sync skipped: `pressure_1` and `pressure_2` conflict with game-side copies (repo text is unchanged; resolve with the owner).
+- 2026-10-18 sync (ADR-034): `o2gen_1` to `o2gen_3` now run one shared file, with rejected-call warnings printed once per change. Check: no repeating `warning: set_intake` or `warning: dump` lines in the log while a fault lasts. Pressure sync (2026-10-18, owner-approved overwrite): `pressure_1` and `pressure_2` held the pre-change text (checked by hash), so their sync state was corrected and they were written. `pressure_1` to `pressure_3` now run one shared file; `status` shows all three running.
 - Expected: status `intake <CO2/10> waste <w> eff <e>% penalty <p>`, updated when it changes. Console `dumped waste at <w>, penalty 0.0` each time waste is in 50-60. Efficiency 100% with waste at or below 60.
 - Warning `waste <w> is above 60; not dumping until 90` means the window was missed. Waste between 60 and 90 waits.
 - At 90 or above the script takes a last-resort dump: `LAST RESORT dump at <w>, penalty <p>`. Paste it. A non-zero penalty is expected only here.
