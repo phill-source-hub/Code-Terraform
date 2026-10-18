@@ -152,7 +152,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-| 2026-10-18 | fe9a45c | Owner report, not logged step by step | Exchange no_input loop fixed (sample returned with warning). Owner reports the Chelicera order flow works end to end. Re-run B-002 restart and no-credits tests to close it. |
+| 2026-10-18 | fe9a45c | PASS (owner) | Exchange no_input loop fixed (sample returned with warning). Owner reports the Chelicera order flow works end to end, and the Lab's restart and no-credits tests pass. |
 
 ### B-003: Bio Exchange (`bio_exchange_1`)
 
@@ -166,7 +166,7 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-| 2026-10-18 | fe9a45c | Owner report, not logged step by step | Owner reports the Exchange order flow works end to end. Re-run the restart test and the multi-fragment order to close it. |
+| 2026-10-18 | fe9a45c | PASS (owner) | Owner reports the Exchange order flow works end to end, including multi-fragment orders and restart. |
 
 ## Contracts
 
