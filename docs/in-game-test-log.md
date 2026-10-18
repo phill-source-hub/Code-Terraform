@@ -451,4 +451,4 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
-|      | fe9a45c      |        |       |
+| 2026-10-18 | fe9a45c | PASS | Log (all.log, 18:14-18:16 UTC): throttle 0.3: 30 m/h, 0.06 Wh/m, range about 1667 m. Throttle 0.5: 50 m/h, 0.10 Wh/m, range about 1000 m (20 h). Throttle 1.0: 100 m/h, 0.20 Wh/m, range about 500 m (5 h). Speed is 100 x throttle m/h; energy is 0.2 x throttle Wh/m. Probe took 3.6 game hours; battery ended at 80%. Ranges are extrapolated from 28 m legs. |
