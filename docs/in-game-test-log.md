@@ -355,3 +355,15 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 |------|--------------|--------|-------|
 | 2026-10-18 | fe9a45c | SYNCED | `heater_1.py` written to the game (owner go-ahead). Replaced the 7-byte "Help me" placeholder. Game file matches repo. Pending a heater placed and the H-001 to H-005 checks. |
 | 2026-10-18 | fe9a45c | PASS (H-005) | Owner: script stopped, heater power read 0. H-001 to H-004 still open. |
+
+### PX-001: Control Room API and Signal Bus payload (`scripts/probes/probe_control_room.py`)
+
+- Setup: Control Room open. Signal Bus research done (otherwise the `bus` row is SKIP). Paste the probe as a new card's script on a 2x1 card. Delete the card afterwards.
+- Run: the card starts itself. Click empty space on the card once (the `click` row). Read the rows on the card and the console lines `probe <name>: ...`.
+- Expected: `widgets` PASS (12 widgets). `persist` PASS on the second tick. `text`, `switch`, `mouse` PASS. `click` PASS after your click. `bus` PASS with sizes 200, 2000, 20000 intact.
+- Fail signs: `widgets` FAIL names the widget and the error. Paste the full console output and the card's rows. A `TypeError` means the argument shape guess is wrong: fix the call and record the real shape in `docs/api-notes.md`. If `persist` never passes, the module state does not survive ticks: the probe then re-runs every tick, so stop the card at once.
+- Record: the real signatures of each widget that passed, the largest payload that came back intact, and whether `mouse()` returns a position.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
