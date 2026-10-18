@@ -169,3 +169,37 @@ def test_format_message_cuts_a_long_value():
     line = cr.format_message(1, "s", 0, "y" * 100, width=10)
 
     assert line.endswith("yyyyyyy...")
+
+
+def test_chars_that_fit_scales_with_font_size_and_width():
+    assert cr.chars_that_fit(100.0, 10) == 16
+    assert cr.chars_that_fit(0.0, 12) == 0
+    assert cr.chars_that_fit(100.0, 0) == 0
+
+
+def test_fit_text_shortens_to_the_width():
+    sixteen = "abcdefghijklmnop"
+    assert cr.fit_text(sixteen, 100.0, 10) == sixteen
+    assert cr.fit_text(sixteen, 62.0, 10) == "abcdefg..."
+
+
+def test_columns_for_fits_as_many_as_the_minimum_allows():
+    assert cr.columns_for(468.0, 200, 4) == 2
+    assert cr.columns_for(1000.0, 200, 4) == 4
+    assert cr.columns_for(100.0, 200, 4) == 1
+
+
+def test_rows_for_counts_rows_between_top_and_bottom_margin():
+    assert cr.rows_for(200, 50, 22, 20) == 5
+    assert cr.rows_for(40, 50, 22, 20) == 0
+
+
+def test_place_sections_stacks_in_order_and_skips_what_does_not_fit():
+    places = cr.place_sections([50, 56, 36], top=70, bottom=188, gap=10)
+
+    assert places == [70, 130, None]
+
+
+def test_place_sections_tries_later_blocks_after_a_skip():
+    assert cr.place_sections([100, 30], top=0, bottom=40, gap=5) == [None, 0]
+    assert cr.place_sections([30, 100, 5], top=0, bottom=40, gap=5) == [0, None, 35]

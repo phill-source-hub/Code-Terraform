@@ -166,3 +166,50 @@ def alert_lines(net_w, runway, fleet_red_count, o2_missing):
     if not alerts and net_w >= 0:
         alerts.append(("running", "All systems nominal"))
     return alerts
+
+
+# Average glyph width as a share of the font size, for the UI font the cards use. An estimate:
+# the cards clip text with it so a long name cannot run past the card edge.
+TEXT_EM = 0.62
+
+
+def chars_that_fit(width_px, size):
+    """How many characters of font `size` fit in `width_px` pixels (an estimate, never negative)."""
+    if size <= 0:
+        return 0
+    return max(int(width_px / (size * TEXT_EM)), 0)
+
+
+def fit_text(text, width_px, size):
+    """`text` shortened with "..." so it fits in `width_px` at font `size`."""
+    return short_text(text, chars_that_fit(width_px, size))
+
+
+def columns_for(width_px, min_column_px, max_columns):
+    """How many columns of at least `min_column_px` fit, between 1 and `max_columns`."""
+    if min_column_px <= 0:
+        return 1
+    return max(1, min(max_columns, int(width_px // min_column_px)))
+
+
+def rows_for(height_px, top_px, row_px, bottom_px):
+    """How many rows of `row_px` fit between `top_px` and the bottom margin."""
+    if row_px <= 0:
+        return 0
+    return max(int((height_px - top_px - bottom_px) // row_px), 0)
+
+
+def place_sections(heights, top, bottom, gap):
+    """Top y for each block, stacked in order. A block that would pass `bottom` gets None.
+
+    Blocks that do not fit are skipped, and later blocks still try to fit below the last one placed.
+    """
+    places = []
+    y = top
+    for height in heights:
+        if y + height <= bottom:
+            places.append(y)
+            y += height + gap
+        else:
+            places.append(None)
+    return places
