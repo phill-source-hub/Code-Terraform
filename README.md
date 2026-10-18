@@ -52,6 +52,7 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | `scripts/contracts/` | contract scripts (game root) |
 | `scripts/automations/` | Automations (game: Ship Computer > Automations). Not synced: paste the file into a new Automation in game |
 | `scripts/probes/` | probe scripts that check UNVERIFIED API facts |
+| `scripts/cards/` | Control Room card scripts (dashboards). Not synced: paste each file into a new card in the Control Room |
 | `tests/` | pytest suite; `tests/harness/` is the fake game API |
 | `docs/` | `api-notes.md`, `decisions.md`, `backlog.md`, `in-game-test-log.md`, `specs/`, `game/` (extracts; `game/manual/` is local only) |
 | `.claude/agents/` | Claude Code subagents used for this project |
@@ -77,8 +78,18 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | terminal_breach (contract) | Crack a 15-digit passcode (digits 1-5) from `.correct` feedback, transmit it | contract `terminal_breach` | Done (X-004 PASS) |
 | data_tablet (contract) | Read distance-0 probe cells of a 30x30 tablet, transmit the message | contract `data_tablet` | Done (X-003 PASS) |
 | probe_thermometer (`scripts/probes/`) | P-001 probe: version, component lookup, thermometer read | Run Script in Game, one-off | Done (P-001 PASS) |
+| control_room (Library, `scripts/libs/control_room.py`) | Runway, colour, progress, channel and alert logic for the Control Room cards | `lib/control_room.py` | Unit tests only; L3 pending (D-001 to D-005) |
+| D2 power runway (card, `scripts/cards/d2_power_runway.py`) | One gauge per power grid with hours of storage left at the deficit | Control Room card, 2x1 | Unit tests only; L3 pending (D-001) |
+| D3 fleet board (card, `scripts/cards/d3_fleet_board.py`) | Vehicles and drones: status dot, status, battery or oil bar; problems first | Control Room card, 2x1 | Unit tests only; L3 pending (D-002) |
+| D6 Earth Orders (card, `scripts/cards/d6_earth_orders.py`) | Current order progress and upcoming orders with rewards | Control Room card, 2x1 | Unit tests only; L3 pending (D-003) |
+| D9 Signal Bus monitor (card, `scripts/cards/d9_signal_bus.py`) | Pending messages and latest broadcast on a typed channel | Control Room card, 2x1 | Unit tests only; L3 pending (D-004) |
+| D1 base overview (card, `scripts/cards/d1_base_overview.py`) | Power, atmosphere, fleet health, top orders and an alert strip | Control Room card, 2x2 | Unit tests only; L3 pending (D-005) |
 
 Status values: Draft, L1+L2 pass, L3 pending, Done.
+
+### Installing a Control Room card
+
+Each file in `scripts/cards/` is one card's script. Open the Control Room, click + New Card, pick the size in the file's header, and paste the file in. Cards import `control_room`, which syncs to game `lib/` with the Libraries (owner go-ahead, see `tools/sync_to_game.py`). Until the Library is in game, a card shows an import error.
 
 ### Installing an Automation
 

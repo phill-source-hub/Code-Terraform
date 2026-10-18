@@ -466,3 +466,58 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 | 2026-10-18 | fe9a45c | PASS | Log (all.log, 18:14-18:16 UTC): throttle 0.3: 30 m/h, 0.06 Wh/m, range about 1667 m. Throttle 0.5: 50 m/h, 0.10 Wh/m, range about 1000 m (20 h). Throttle 1.0: 100 m/h, 0.20 Wh/m, range about 500 m (5 h). Speed is 100 x throttle m/h; energy is 0.2 x throttle Wh/m. Probe took 3.6 game hours; battery ended at 80%. Ranges are extrapolated from 28 m legs. |
+
+### D-001: D2 power runway (`scripts/cards/d2_power_runway.py`)
+
+- Setup: Library `control_room` synced to game `lib/` (owner go-ahead). At least one power grid with a battery. Test a grid that drains: load it so net is negative, or let it run down.
+- Run: New Control Room card, 2x1. Paste the file as its script. Let it run one full in-game hour.
+- Expected: One gauge per grid (max 4), grid anchor id as the label, bar fill = stored plus reserve over capacity. Dot green above 2 h of runway, amber 1-2 h, red under 1 h. Text `runway N h` or `not draining` when net is not negative.
+- Fail signs: `import` error (Library missing from `lib/`). A gauge that stays at 0 with a battery charged. A runway that does not change as stored energy falls.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### D-002: D3 fleet board (`scripts/cards/d3_fleet_board.py`)
+
+- Setup: At least one rover and one drone, ideally a heli drone with oil. One rover stranded is the best test of sort order (stranded or low battery).
+- Run: New Control Room card, 2x1. Paste the file as its script.
+- Expected: One row per vehicle and drone. Problem rows (stranded, scrambled, stalled) at the top with a red dot. Heli drones show an oil bar, others a battery bar.
+- Fail signs: A heli drone showing a battery bar. A stranded unit below healthy ones. A crash on an empty fleet (should read `No vehicles or drones yet`).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### D-003: D6 Earth Orders (`scripts/cards/d6_earth_orders.py`)
+
+- Setup: Earth Orders research done; at least one current contractor order and, if possible, one upcoming order.
+- Run: New Control Room card, 2x1. Paste the file as its script. Compare with the in-game Earth Orders page.
+- Expected: Current orders with a progress bar and `shipped / needed` units, matching the Earth Orders page. Upcoming orders on the right with reward credits.
+- Fail signs: A progress bar over 100%. Units that do not match the Orders page. `Earth Orders not available` when the page shows an order.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### D-004: D9 Signal Bus monitor (`scripts/cards/d9_signal_bus.py`)
+
+- Setup: Signal Bus research done. Send a test message from the PX-001 probe pattern or from a card, to a channel you type into the field.
+- Run: New Control Room card, 2x1. Paste the file as its script. Type `ctrl.probe.echo` into the channel field, then type a bad name such as `bad name!`.
+- Expected: A valid channel lists its pending messages as `#id sender tICK value`. A bad name shows the hint line and does not read the bus. A channel with a broadcast shows `broadcast: ...`.
+- Fail signs: The hint for a valid name. Messages from another channel. `Signal Bus not researched yet` after research is done.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### D-005: D1 base overview (`scripts/cards/d1_base_overview.py`)
+
+- Setup: Power, atmosphere, fleet and orders all in place. Test with the O2 sensor unrepaired if possible, to check the `unavailable` reading.
+- Run: New Control Room card, 2x2 (1000 x 400). Paste the file as its script. Let it run one full in-game hour.
+- Expected: Alert strip across the top (up to 3 lines, most urgent first). Power bar and runway, atmosphere readings, fleet counts, top three current orders. `All systems nominal` only when there is power data and no alert.
+- Fail signs: `No power data` while power is connected. Any value shown for O2 with the sensor unrepaired (it should read `unavailable`). A crash on a missing component (each block is skipped on None).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |

@@ -1,6 +1,6 @@
 # Spec: Control Room cards (dashboards and controls)
 
-Status: draft for owner review. Not started. Source: owner brief (Control Room page), manual extracts in `docs/game/` (power, rover, drone, signal bus, shop) and manual pages (Earth Orders, Storage Bin, Atmosphere, Map Markers, Supply Dock, Weather Station, Drone Service Station).
+Status: D1, D2, D3, D6 and D9 built (`scripts/cards/`, `scripts/libs/control_room.py`), unit tested. In-game checks D-001 to D-005 pending. Step 0 probe done (PX-001). Source: owner brief (Control Room page), manual extracts in `docs/game/` (power, rover, drone, signal bus, shop) and manual pages (Earth Orders, Storage Bin, Atmosphere, Map Markers, Supply Dock, Weather Station, Drone Service Station).
 
 Tags: **VERIFIED (docs)** = in our extracts or manual. **UNVERIFIED** = from the owner's brief text only, or not yet in `docs/api-notes.md`. UNVERIFIED names need a probe card (step 0) before any code relies on them.
 

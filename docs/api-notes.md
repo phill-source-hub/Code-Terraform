@@ -85,3 +85,11 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 - VERIFIED (docs): `latest(channel)` returns the value or `None`; it does not consume.
 - VERIFIED (ingame, PX-001 run 4, 2026-10-18): `send` of a `{"req", "text"}` dict returns `ok` and `receive` returns a `CommsMessage` whose `.value` is the sent dict. A payload of 4,090 characters of text is accepted and 4,104 is rejected with `invalid_value`, so the bus limit is about 4 KB of text, below the 1,024-value rule in the docs. The exact limit is not pinned (the 4,096 boundary is a guess).
 - Not yet in game: a script of ours that relies on `comms` in production. In-game checks: `docs/in-game-test-log.md`, PX-001.
+
+## Control Room cards (VERIFIED stub for names; behaviour UNVERIFIED until D-001 to D-005)
+
+- UNVERIFIED: a card script can import a Library (). Libraries import in game scripts; panel scripts are not tested yet. D-001 is the first run.
+- UNVERIFIED:  and  on an unrepaired sensor. The manual says these need the sensor repaired. The cards catch any exception and show . The exact game behaviour (raise, or a value) is not checked; D-005 covers it.
+- UNVERIFIED: builtins used by the cards (, , , , , , , , ). Assumed from the Python-like stub;  checks imports only, not builtins.
+- VERIFIED stub:  returns the stored text or ;  takes , , , .
+
