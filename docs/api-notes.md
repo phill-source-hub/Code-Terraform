@@ -50,6 +50,7 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 - Contracts C-001, X-001 to X-004 (2026-10-17): `get_component("transmitter")`, `connect("earth")` and `transmit(contract.id, answer)` return status `correct`, and the contract status becomes `completed`.
 - X-003 and X-004: `tablet.rows`, `tablet.cols` and `terminal.length` are properties, and the `.correct` feedback rule held in game.
 - S-001 (2026-10-17): tilt = 90 - sun elevation, using `clock.get_elevation()`, matches the output on the morning check.
+- PX-001 runs 3 and 4 (2026-10-18, `scripts/probes/probe_control_room.py`): the Control Room widgets `card`, `draw_text`, `label`, `status_dot`, `progress_bar`, `button`, `switch`, `text_field`, `combo`, `draw_rect`, `draw_line`, `draw_circle` draw with the stub's argument order (`key` first on `button`, `switch`, `text_field`, `combo`). `set_text`/`get_text` and `set_switch`/`get_switch` round-trip. `mouse()` returns an object with `x` and `y`. Run 4 is the bus limit below. The `clicks()` and `persist` rows passed in run 3.
 
 ## Data Archive and research gates (VERIFIED docs, manual)
 
@@ -75,10 +76,12 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 | Probe | Checks | Result |
 |-------|--------|--------|
 | `scripts/probes/probe_thermometer.py` (P-001) | version call, component lookup, thermometer read | PASS 2026-10-17 (in-game-test-log) |
+| `scripts/probes/probe_control_room.py` (PX-001) | Control Room widgets, text and switch round trips, mouse, clicks, bus payload limit | Runs 3-4 PASS for the rows reported (2026-10-18); see PX-001 |
 
 ## Signal Bus (`comms`, VERIFIED docs, build fe9a45c)
 
 - `get_component("comms")` is `None` until Signal Bus research. Queue calls (`send`, `receive`, `pending`) and broadcast calls (`broadcast`, `latest`) take channel names of 1-64 characters. Payloads are JSON-safe and at most 1,024 values. Details and statuses: `docs/game/signal-bus.md`.
 - VERIFIED (docs): `pending(channel)` takes nothing; `receive(channel, id)` takes exactly that message or returns `not_found`.
 - VERIFIED (docs): `latest(channel)` returns the value or `None`; it does not consume.
-- Not in game yet: no script of ours has run against the bus. In-game checks: `docs/in-game-test-log.md`, section "Signal Bus".
+- VERIFIED (ingame, PX-001 run 4, 2026-10-18): `send` of a `{"req", "text"}` dict returns `ok` and `receive` returns a `CommsMessage` whose `.value` is the sent dict. A payload of 4,090 characters of text is accepted and 4,104 is rejected with `invalid_value`, so the bus limit is about 4 KB of text, below the 1,024-value rule in the docs. The exact limit is not pinned (the 4,096 boundary is a guess).
+- Not yet in game: a script of ours that relies on `comms` in production. In-game checks: `docs/in-game-test-log.md`, PX-001.

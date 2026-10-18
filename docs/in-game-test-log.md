@@ -356,6 +356,20 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | 2026-10-18 | fe9a45c | SYNCED | `heater_1.py` written to the game (owner go-ahead). Replaced the 7-byte "Help me" placeholder. Game file matches repo. Pending a heater placed and the H-001 to H-005 checks. |
 | 2026-10-18 | fe9a45c | PASS (H-005) | Owner: script stopped, heater power read 0. H-001 to H-004 still open. |
 
+### PX-001: Control Room API and Signal Bus payload (`scripts/probes/probe_control_room.py`)
+
+- Setup: Control Room open. Signal Bus research done (otherwise the `bus` row is SKIP). Paste the probe as a new card's script on a 2x1 card. Delete the card afterwards.
+- Run: the card starts itself. Click empty space on the card once (the `click` row). Read the rows on the card and the console lines `probe <name>: ...`.
+- Expected: `widgets` PASS (12 widgets). `persist` PASS on the second tick. `text`, `switch`, `mouse` PASS. `click` PASS after your click. `bus` PASS with sizes 200, 2000, 9000 intact. The game's default string limit is 10,000; a larger payload stops the script with OverflowError.
+- Fail signs: `widgets` FAIL names the widget and the error. Paste the full console output and the card's rows. A `TypeError` means the argument shape guess is wrong: fix the call and record the real shape in `docs/api-notes.md`. If `persist` never passes, the module state does not survive ticks: the probe then re-runs every tick, so stop the card at once.
+- Record: the real signatures of each widget that passed, the largest payload that came back intact, and whether `mouse()` returns a position.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | FAIL (run 1, script `panel_1.py`) | widgets: key must be the first argument on button, switch, text_field, combo (fixed in the probe). bus: payload check compared str(packet); the packet is a CommsMessage, so the check now reads .value (fixed). text, switch, mouse, persist, click PASS. Log: `panel_1.log`, ticks 479786-479950. |
+| 2026-10-18 | fe9a45c | FAIL (run 2) | Script stopped at the `bus` 20000-character payload: `OverflowError: string length 20,000 exceeds the current limit of 10,000` (panel_1.py, line 97). Sizes cut to 200, 2000, 9000. |
+| 2026-10-18 | fe9a45c | PASS (run 4, bus line only pasted) | Run 4 bus line: `probe bus: PASS largest accepted about 4090, rejected at 4104`, so the bus limit is about 4 KB of text. Run 3 (same card): widgets, text, switch, mouse, persist, click PASS; bus rejected 9000 chars with `invalid_value`. Owner to confirm the rest of run 4 rows on the card. |
+
 ## Rover (spec `docs/specs/rover.md`, branch feat/rover-survey-mine)
 
 ### R-001: Library and script load (`rover_1`, `charging_station_1`)
