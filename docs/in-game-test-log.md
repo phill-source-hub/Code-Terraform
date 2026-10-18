@@ -415,3 +415,14 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        |       |
+
+### R-006: Rescue drone (`charging_station_1`, `rover_1`)
+
+- Setup: rover in the field with charge run down until it strands (or move it with the drive and let the battery drain). Charging station at base powered, not already rescuing.
+- Expected: within one poll (5 s) the station sets status `rescue drone sent to rover_1`. The rover shows `being_rescued`, holds position, and its route continues once charged. The rover's log shows no `stalled` survey skip.
+- Pass: the drone reaches the rover, the rover charges and resumes its leg, and no second drone goes out while the first is out.
+- Fail signs: `rescue rover_1 <status>: <message>` (a refusal, shown once). Paste the message.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |

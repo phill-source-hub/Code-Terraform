@@ -20,7 +20,8 @@ Why nearest first: contacts are already on the map (manual, Nocturna), so no gri
     find them. Visiting near ones first makes the first mining trip short and cheap.
 API facts relied on (docs/game/rover.md, manual): self.nav.set_target, set_throttle, brake,
     get_distance_to, get_position; self.sonar.scan, survey, range; self.drill.mine;
-    self.battery.level, wh; self.cargo.count, stacks; self.output.connect, send; self.modules(),
+    self.battery.level, wh; self.is_being_rescued; self.cargo.count, stacks;
+    self.output.connect, send; self.modules(),
     self.mount, self.unmount (MountSlot .index .type .module_id); get_component("nocturna")
     .get_bounds, points_of_interest; get_component("journal").discovered_sites, surveyed_sites;
     get_component("notebook").set; get_component("inventory").count; sleep, set_status.
@@ -79,6 +80,11 @@ def drive_to(x, y, wh_per_m):
         remaining = self.nav.get_distance_to(target[0], target[1])
         if arrived(remaining):
             break
+        if self.is_being_rescued():
+            # A rescue drone is charging us where we stand (manual): hold, and do not count the wait
+            # as a stall or the low-charge check as a reason to give up the leg.
+            sleep(TICK_S)
+            continue
         if target != HOME and self.battery.wh() < return_reserve_wh(
             distance(position(), HOME), wh_per_m
         ):

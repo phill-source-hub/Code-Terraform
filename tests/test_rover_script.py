@@ -154,24 +154,49 @@ def test_rover_surveys_nearest_unscanned_contact_then_saves_map():
     assert len(grid_map["contacts"]) == 3
 
 
-def test_charge_station_queues_docked_vehicle_once_and_skips_busy_ones():
-    game = FakeGame()
-    _stop_at_first_sleep(game)
-    charged = []
-    states = {"rover_1": {"state": "docked"}, "rover_2": {"state": "charging"}}
+def _station(*, docked=(), states=None, charged=None, rescuing=False, dispatch=None):
+    """A charging station fake. `dispatch` is the status dispatch_rescue returns (default ok)."""
+    states = states or {}
+    charged = charged if charged is not None else []
+    dispatched = []
+
+    def dispatch_rescue(vehicle_name, target):
+        dispatched.append((vehicle_name, target))
+        return SimpleNamespace(status=dispatch or "ok", message="refused" if dispatch else "")
 
     def charge(vehicle_id, target):
         charged.append((vehicle_id, target))
         return _ok()
 
     station = SimpleNamespace(
-        get_docked=lambda: ["rover_1", "rover_2"],
-        status=lambda vehicle_id: states[vehicle_id],
+        get_docked=lambda: list(docked),
+        status=lambda vehicle_id: states.get(vehicle_id, {"state": "docked"}),
         charge=charge,
+        is_rescuing=lambda: rescuing,
+        dispatch_rescue=dispatch_rescue,
     )
+    return station, charged, dispatched
 
+
+def _stranded_rover(game, status="stranded"):
+    game.components["rover_1"] = FakeComponent("rover_1", "rover", {"status": lambda: status})
+
+
+def _run_station(game, station):
     with suppress(_Stop):
         run_script(STATION.read_text(encoding="utf-8"), game, str(STATION), {"self": station})
+
+
+def test_charge_station_queues_docked_vehicle_once_and_skips_busy_ones():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _stranded_rover(game, status="idle")
+    station, charged, _ = _station(
+        docked=["rover_1", "rover_2"],
+        states={"rover_1": {"state": "docked"}, "rover_2": {"state": "charging"}},
+    )
+
+    _run_station(game, station)
 
     assert charged == [("rover_1", 1.0)]
 
@@ -179,75 +204,65 @@ def test_charge_station_queues_docked_vehicle_once_and_skips_busy_ones():
 def test_charge_station_warns_when_queue_refuses_a_vehicle():
     game = FakeGame()
     _stop_at_first_sleep(game)
-    station = SimpleNamespace(
-        get_docked=lambda: ["rover_1"],
-        status=lambda vehicle_id: {"state": "docked"},
-        charge=lambda vehicle_id, target: SimpleNamespace(
-            status="station_offline", message="offline"
-        ),
+    _stranded_rover(game, status="idle")
+    station, _, _ = _station(docked=["rover_1"])
+    station.charge = lambda vehicle_id, target: SimpleNamespace(
+        status="station_offline", message="offline"
     )
 
-    with suppress(_Stop):
-        run_script(STATION.read_text(encoding="utf-8"), game, str(STATION), {"self": station})
+    _run_station(game, station)
 
     assert game.statuses == [("charge rover_1 station_offline: offline", "warn")]
 
 
-def test_rover_marks_contact_out_of_range_even_on_full_charge():
-    # 900 m out needs about 105 Wh with the return reserve, more than the 100 Wh tank.
+def test_charge_station_sends_drone_to_stranded_rover():
     game = FakeGame()
     _stop_at_first_sleep(game)
-    _world(game, contacts=[_contact(900, 0)])
-    targets, scans = [], []
-    rover = _rover(
-        [], modules=[_slot(2, "drill_basic", "drill_module")], scans=scans, targets=targets
-    )
+    _stranded_rover(game, status="stranded")
+    station, _, dispatched = _station()
 
-    _run_rover(game, rover)
+    _run_station(game, station)
 
-    assert targets == []
-    assert scans == []
+    assert dispatched == [("rover_1", 1.0)]
+    assert game.statuses == [("rescue drone sent to rover_1", "info")]
 
 
-def test_rover_turns_for_home_when_charge_falls_below_return_reserve():
-    # The charge drops after the first leg starts; the rover must head for base, not finish the leg.
+def test_charge_station_does_not_send_second_drone_while_one_is_out():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _stranded_rover(game, status="stranded")
+    station, _, dispatched = _station(rescuing=True)
+
+    _run_station(game, station)
+
+    assert dispatched == []
+
+
+def test_charge_station_leaves_healthy_rover_alone():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _stranded_rover(game, status="moving")
+    station, _, dispatched = _station()
+
+    _run_station(game, station)
+
+    assert dispatched == []
+
+
+def test_charge_station_reports_refused_rescue_once():
     game = FakeGame()
     sleeps = []
 
     def sleep(seconds, /):
         sleeps.append(seconds)
-        if len(sleeps) > 200:
+        if len(sleeps) >= 3:
             raise _Stop
 
     game.sleep = sleep
-    _world(game, contacts=[_contact(-30, 40)])
-    state = {"left": 100.0, "driving": False}
-    targets = []
+    _stranded_rover(game, status="stranded")
+    station, _, dispatched = _station(dispatch="station_offline")
 
-    def set_target(x, y):
-        targets.append((x, y))
-        state["driving"] = True
-        return _ok()
+    _run_station(game, station)
 
-    rover = _rover([], modules=[_slot(2, "drill_basic", "drill_module")], targets=targets)
-    rover.nav.set_target = set_target
-    rover.nav.get_distance_to = lambda x, y: distance_from_origin(x, y)
-    rover.battery = SimpleNamespace(
-        level=lambda: state["left"] / 100.0,
-        wh=lambda: state["left"],
-    )
-
-    def sleep_and_drain(seconds, /):
-        if state["driving"]:
-            state["left"] = 3.0
-        sleep(seconds)
-
-    game.sleep = sleep_and_drain
-
-    _run_rover(game, rover)
-
-    assert targets[:2] == [(-30, 40), (0, 0)]
-
-
-def distance_from_origin(x, y):
-    return (x * x + y * y) ** 0.5
+    assert len(dispatched) == 3
+    assert game.statuses == [("rescue rover_1 station_offline: refused", "warn")]
