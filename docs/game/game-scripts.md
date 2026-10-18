@@ -18,7 +18,7 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 | Game file | Repo source | State in game |
 |-----------|-------------|---------------|
 | `harvester_1.py` | `scripts/main/harvester_1.py` | Game holds the old power-monitor copy on this slot (ADR-017 era). Owner decision needed. |
-| `o2gen_1.py` | `scripts/main/o2gen_1.py` (source, ADR-034) | Older version, no `sleep` (ADR-024 change not in game). |
+| `o2gen_1.py`, `o2gen_2.py`, `o2gen_3.py` | `scripts/main/o2gen_1.py` (source; copies byte-identical, ADR-034) | Synced 2026-10-18 (sleep and warn-once). |
 | `relay_hack.py` | `scripts/contracts/relay_hack.py` | Older self-contained copy. |
 | `solar_1.py`, `solar_2.py` | `scripts/main/` (generated) | Older self-contained copies. |
 | `solar_3.py` | `scripts/main/solar_3.py` (generated, slot added 2026-10-17) | Copy of the solar code, docstring says `solar_2`. Not written by sync. |
