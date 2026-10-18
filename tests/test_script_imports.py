@@ -20,7 +20,7 @@ GAME_SCRIPTS = sorted(
     ]
 )
 LIBRARIES = sorted(LIBS.glob("*.py"))
-BUILTIN_MODULES = {"heapq"}
+BUILTIN_MODULES = {"heapq", "math"}
 
 
 def _imported_modules(path: Path) -> list[str]:

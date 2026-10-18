@@ -1,33 +1,34 @@
-"""Rover: survey the whole map once, then mine the best reachable site and bring the ore home.
+"""Rover: survey contacts nearest base first, and mine as soon as a surveyed site is in reach.
 
 Where it runs: machine script slot `rover_1` (self = this rover). Needs Nav, Sonar, Drill mounted.
-Imports the `rover_plan` Library for stops, tier choice, target choice and energy gates.
-Phases:
-    1. Survey (once, unless the Data Archive already holds a map): drive a grid of stops sized to
-       the mounted sonar range, scan and survey at each, then visit each contact the grid did not
-       resolve, once. The map (base at 0, 0, contacts, sites) goes to the Data Archive as MAP_KEY
-       and is printed.
-    2. Mine, repeated: at base, unload the hold to Inventory and swap in the best drill from
-       Base Inventory. Then pick the best surveyed site the mounted drill can cut, drive there,
-       mine until the hold is full or the return reserve is reached, and drive home.
-    3. Recharge: any leg that would leave less charge than the way home needs first goes home
-       and waits there. The Charging Station's script (charging_station_1) charges the parked rover.
+Imports the `rover_plan` Library for contact order, tier choice, target choice and energy gates.
+Loop, one pass per tick:
+    1. Mine, if a surveyed mineral site is reachable on the current charge. At base first, unload
+       the hold to Inventory and swap in the best drill from Base Inventory. Then drive to the best
+       site, mine until the hold is full or the return reserve is reached, and drive home.
+    2. Survey, once per pass after a mining trip, or whenever nothing is mineable. Visit the
+       unscanned contact nearest base, scan there, survey productive hits, and save the map.
+       Every contact is visited at most once. A contact still unscanned after its visit is blocked.
+    3. Rest, when nothing is mineable and no contact is left.
+The map (base at 0, 0, bounds, contacts, sites) is saved to the Data Archive as MAP_KEY after every
+    survey visit, so it grows as the rover works. Nothing is printed except the save summary.
+Recharge: any leg that would leave less charge than the way home needs first goes home and waits.
+    The Charging Station's script (charging_station_1) charges the parked rover.
 Bounds: every drive stops on arrival, on a stall, on the tick limit or on low charge. Every wait
     has a tick limit. Nothing here calls a game action that the status literal does not confirm.
-Why the reserve is checked at each visit: a rover that strands away from base is rescued slowly
-    (manual, Batteries and Charging), so it turns back before the charge runs out.
+Why nearest first: contacts are already on the map (manual, Nocturna), so no grid is needed to
+    find them. Visiting near ones first makes the first mining trip short and cheap.
 API facts relied on (docs/game/rover.md, manual): self.nav.set_target, set_throttle, brake,
     get_distance_to, get_position; self.sonar.scan, survey, range; self.drill.mine;
     self.battery.level, wh; self.cargo.count, stacks; self.output.connect, send; self.modules(),
     self.mount, self.unmount (MountSlot .index .type .module_id); get_component("nocturna")
-    .get_bounds, points_of_interest; get_component("journal").discovered_sites;
-    get_component("notebook").has, set; get_component("inventory").count; sleep, set_status.
+    .get_bounds, points_of_interest; get_component("journal").discovered_sites, surveyed_sites;
+    get_component("notebook").set; get_component("inventory").count; sleep, set_status.
 """
 
 from rover_plan import (
     DEFAULT_WH_PER_M,
     DRILL_TIERS,
-    STOP_SPACING_FACTOR,
     VEHICLE_CARGO_CAPACITY,
     arrived,
     best_drill,
@@ -38,10 +39,10 @@ from rover_plan import (
     pending_contacts,
     return_reserve_wh,
     route_wh,
-    survey_stops,
 )
 
 MAP_KEY = "rover.map"
+RATE_KEY = "rover.wh_per_m"
 HOME = (0.0, 0.0)
 CRUISE = 0.5
 TICK_S = 1
@@ -62,16 +63,30 @@ def position():
     return (p.x, p.y)
 
 
-def drive_to(x, y):
-    """Drive to (x, y) and brake. True only if the rover is within arrival range at the end."""
-    self.nav.set_target(x, y)
+def drive_to(x, y, wh_per_m):
+    """Drive to (x, y) and brake. True only if the rover is within arrival range at the end.
+
+    Mid-leg check: if the charge left no longer covers the way home from here, the target is
+    changed to base at once. The pre-leg check uses an estimate, so a real rate that is worse
+    must not strand the rover out on the field.
+    """
+    target = (x, y)
+    self.nav.set_target(target[0], target[1])
     self.nav.set_throttle(CRUISE)
-    best = self.nav.get_distance_to(x, y)
+    best = self.nav.get_distance_to(target[0], target[1])
     stalled = 0
     for _ in range(MAX_DRIVE_TICKS):
-        remaining = self.nav.get_distance_to(x, y)
+        remaining = self.nav.get_distance_to(target[0], target[1])
         if arrived(remaining):
             break
+        if target != HOME and self.battery.wh() < return_reserve_wh(
+            distance(position(), HOME), wh_per_m
+        ):
+            target = HOME
+            self.nav.set_target(HOME[0], HOME[1])
+            best = self.nav.get_distance_to(HOME[0], HOME[1])
+            stalled = 0
+            set_status("low charge; heading home", "warn")
         if remaining < best:
             best = remaining
             stalled = 0
@@ -106,15 +121,31 @@ def recharge_at_home():
 
 
 def visit(x, y, state):
-    """Drive to (x, y) if the trip and the way home fit the charge, otherwise recharge first."""
-    if not affordable(position(), (x, y), state["wh_per_m"]) and not recharge_at_home():
-        return False
+    """Drive to (x, y) if the trip and the way home fit the charge, otherwise recharge first.
+
+    Returns "arrived", "stalled" (drive ended short), "no_charge" (base could not recharge the
+    rover, so the visit did not start) or "out_of_range" (the trip does not fit even on a full
+    charge). Only "no_charge" is worth retrying later.
+    """
+    wh_per_m = state["wh_per_m"]
+    if not affordable(position(), (x, y), wh_per_m):
+        if not recharge_at_home():
+            return "no_charge"
+        if not affordable(position(), (x, y), wh_per_m):
+            return "out_of_range"
     before = self.battery.wh()
     start = position()
-    reached = drive_to(x, y)
+    reached = drive_to(x, y, wh_per_m)
     metres = distance(start, position())
-    state["wh_per_m"] = calibrated_wh_per_m(state["wh_per_m"], before - self.battery.wh(), metres)
-    return reached
+    state["wh_per_m"] = calibrated_wh_per_m(wh_per_m, before - self.battery.wh(), metres)
+    save_rate(state)
+    return "arrived" if reached else "stalled"
+
+
+def save_rate(state):
+    notebook = get_component("notebook")
+    if notebook is not None:
+        notebook.set(RATE_KEY, state["wh_per_m"])
 
 
 def scan_here():
@@ -135,27 +166,13 @@ def contacts():
     return get_component("nocturna").points_of_interest()
 
 
-def survey_map(state):
-    bounds_box = get_component("nocturna").get_bounds()
-    bounds = (bounds_box.min_x, bounds_box.max_x, bounds_box.min_y, bounds_box.max_y)
-    spacing = self.sonar.range() * STOP_SPACING_FACTOR
-    stops = survey_stops(bounds, spacing)
-    for index, (x, y) in enumerate(stops):
-        set_status("survey stop " + str(index + 1) + " of " + str(len(stops)), "info")
-        if visit(x, y, state):
-            scan_here()
-        else:
-            print("skipped stop " + str(x) + ", " + str(y))
-    # One pass over the contacts the grid left unresolved. A contact still unscanned after its
-    # visit is blocked; it is not revisited, so the pass always ends.
-    for point in pending_contacts([_point(p) for p in contacts()], set()):
-        if visit(point["x"], point["y"], state):
-            scan_here()
-    return bounds
-
-
 def _point(p):
     return {"x": p.x, "y": p.y, "scanned": p.scanned, "kind": p.kind}
+
+
+def map_bounds():
+    box = get_component("nocturna").get_bounds()
+    return (box.min_x, box.max_x, box.min_y, box.max_y)
 
 
 def site_record(site):
@@ -167,18 +184,37 @@ def site_record(site):
     return record
 
 
-def save_map(bounds):
+def save_map():
     journal = get_component("journal")
     sites = [site_record(s) for s in journal.discovered_sites("nocturna")]
     contact_list = [_point(p) for p in contacts()]
-    grid_map = build_map(bounds, contact_list, sites, HOME)
+    grid_map = build_map(map_bounds(), contact_list, sites, HOME)
     notebook = get_component("notebook")
     if notebook is not None:
         saved = notebook.set(MAP_KEY, grid_map)
         if saved.status != "ok":
             set_status("map save " + saved.status + ": " + saved.message, "warn")
-    print("map: " + str(len(contact_list)) + " contacts, " + str(len(sites)) + " sites")
-    return grid_map
+
+
+def survey_next(state):
+    """Visit the unscanned contact nearest base. True if a contact was visited."""
+    pending = pending_contacts([_point(p) for p in contacts()], state["visited"], HOME)
+    if not pending:
+        return False
+    point = pending[0]
+    key = (point["x"], point["y"])
+    set_status("survey " + str(len(pending)) + " contacts left", "info")
+    result = visit(point["x"], point["y"], state)
+    if result == "no_charge":
+        # Not marked: the same contact is tried again once the rover has charge.
+        return True
+    # Marked visited for any other result, so an unreachable or stalled contact cannot hold the
+    # loop. A restart clears the list and tries again.
+    state["visited"][key] = True
+    if result == "arrived":
+        scan_here()
+    save_map()
+    return True
 
 
 def mounted_drill_slot():
@@ -257,37 +293,35 @@ def mineral_sites():
 
 
 def mine_cycle(state):
+    """One mining trip if a surveyed site is reachable. True if a trip was attempted."""
     if arrived(distance(position(), HOME)):
         unload_cargo()
         refresh_drill()
     drill_id = mounted_drill_id()
     if drill_id is None:
         set_status("no drill mounted; resting", "warn")
-        return rest()
-    here = position()
+        return False
     pick = choose_target(
         mineral_sites(),
         drill_id=drill_id,
-        position=here,
+        position=position(),
         home=HOME,
         charge_wh=self.battery.wh(),
         wh_per_m=state["wh_per_m"],
         cargo_free=VEHICLE_CARGO_CAPACITY - self.cargo.count(),
     )
     if pick is None:
-        set_status("no surveyed site reachable on this charge; resting at base", "info")
-        if visit(HOME[0], HOME[1], state):
-            unload_cargo()
-        return rest()
+        return False
     site = pick["site"]
     set_status("mining " + site["id"] + " (" + site["item_id"] + ")", "info")
-    if not visit(site["x"], site["y"], state):
+    if visit(site["x"], site["y"], state) != "arrived":
         set_status("could not reach " + site["id"] + "; will retry", "warn")
-        return
+        return True
     mined = mine_units(pick["units"], state)
     print("mined " + str(mined) + " from " + site["id"])
-    if visit(HOME[0], HOME[1], state):
+    if visit(HOME[0], HOME[1], state) == "arrived":
         unload_cargo()
+    return True
 
 
 def rest():
@@ -295,15 +329,28 @@ def rest():
         sleep(TICK_S)
 
 
-def main():
-    state = {"wh_per_m": DEFAULT_WH_PER_M}
+def start_rate():
+    # The measured rate survives a restart, so the first legs after one use a real number.
     notebook = get_component("notebook")
-    if notebook is None or not notebook.has(MAP_KEY):
-        bounds = survey_map(state)
-        save_map(bounds)
+    if notebook is not None and notebook.has(RATE_KEY):
+        stored = notebook.get(RATE_KEY, DEFAULT_WH_PER_M)
+        if isinstance(stored, float) and stored > 0:
+            return stored
+    return DEFAULT_WH_PER_M
+
+
+def main():
+    state = {"wh_per_m": start_rate(), "visited": {}}
     while True:
-        mine_cycle(state)
-        # A cycle that fails at once (unreachable site, no charge) must still let time pass.
+        if mine_cycle(state):
+            # Survey one contact after each trip, so the map keeps growing while mining.
+            survey_next(state)
+        elif not survey_next(state):
+            set_status("all contacts surveyed; resting at base", "info")
+            if visit(HOME[0], HOME[1], state) == "arrived":
+                unload_cargo()
+            rest()
+        # A pass that does nothing (no site, no contact) must still let time pass.
         sleep(TICK_S)
 
 

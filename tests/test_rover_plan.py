@@ -1,6 +1,5 @@
-"""Unit tests for the rover_plan Library: stops, tiers, target choice and energy gates."""
+"""Unit tests for the rover_plan Library: tiers, contact order, target choice and energy gates."""
 
-import math
 import sys
 from pathlib import Path
 
@@ -33,47 +32,6 @@ def test_best_sonar_picks_longest_range():
     assert rp.best_sonar([]) is None
 
 
-# --- survey stops -------------------------------------------------------------------------------
-
-
-def test_survey_stops_cover_box_including_edges():
-    stops = rp.survey_stops((0, 100, 0, 50), 50)
-    xs = {x for x, _ in stops}
-    ys = {y for _, y in stops}
-    assert xs == {0, 50, 100}
-    assert ys == {0, 50}
-
-
-def test_survey_stops_alternate_direction_each_row():
-    stops = rp.survey_stops((0, 20, 0, 10), 10)
-    row0 = [x for x, y in stops if y == 0]
-    row1 = [x for x, y in stops if y == 10]
-    assert row0 == [0, 10, 20]
-    assert row1 == [20, 10, 0]
-
-
-def test_survey_stops_grid_point_is_within_sonar_range_of_every_map_point():
-    # A stop at spacing s leaves the farthest map point s / sqrt(2) away; the spacing factor
-    # keeps that under the range.
-    rng = 50
-    spacing = rp.STOP_SPACING_FACTOR * rng
-    stops = rp.survey_stops((0, 300, 0, 300), spacing)
-    worst = 0.0
-    for px in range(0, 301, 5):
-        for py in range(0, 301, 5):
-            worst = max(worst, min(math.hypot(px - x, py - y) for x, y in stops))
-    assert worst <= rng
-
-
-def test_survey_stops_rejects_non_positive_spacing():
-    with pytest.raises(ValueError):
-        rp.survey_stops((0, 10, 0, 10), 0)
-
-
-def test_survey_stops_single_point_box():
-    assert rp.survey_stops((5, 5, 5, 5), 10) == [(5, 5)]
-
-
 # --- energy -------------------------------------------------------------------------------------
 
 
@@ -89,7 +47,7 @@ def test_unit_mining_wh_rich_site_halves_energy_per_unit():
 def test_unit_mining_wh_industrial_faster_but_draws_more():
     basic = rp.unit_mining_wh("drill_module", "titanium", "standard")
     industrial = rp.unit_mining_wh("drill_module_industrial", "titanium", "standard")
-    # Industrial: 20 W for 15 min (300 W·min). Basic: 10 W for 20 min (200 W·min). Faster, costlier.
+    # Industrial: 20 W for 15 min (300 W-min). Basic: 10 W for 20 min (200 W-min).
     assert industrial > basic
 
 
@@ -240,14 +198,30 @@ def test_choose_target_returns_none_with_no_spare_charge():
 # --- contacts, arrival and map ------------------------------------------------------------------
 
 
-def test_pending_contacts_drops_scanned_and_blocked():
+def test_pending_contacts_drops_scanned_and_visited():
     points = [
         {"x": 1, "y": 1, "scanned": False},
         {"x": 2, "y": 2, "scanned": True},
         {"x": 3, "y": 3, "scanned": False},
     ]
-    left = rp.pending_contacts(points, blocked={(3, 3)})
+    left = rp.pending_contacts(points, visited={(3, 3)})
     assert [(p["x"], p["y"]) for p in left] == [(1, 1)]
+
+
+def test_pending_contacts_nearest_to_origin_first():
+    points = [
+        {"x": 900, "y": 0, "scanned": False},
+        {"x": -30, "y": 40, "scanned": False},
+        {"x": 100, "y": 0, "scanned": False},
+    ]
+    order = rp.pending_contacts(points, visited=set())
+    assert [(p["x"], p["y"]) for p in order] == [(-30, 40), (100, 0), (900, 0)]
+
+
+def test_pending_contacts_orders_from_given_origin():
+    points = [{"x": 0, "y": 0, "scanned": False}, {"x": 500, "y": 0, "scanned": False}]
+    order = rp.pending_contacts(points, visited=set(), origin=(500, 0))
+    assert order[0]["x"] == 500
 
 
 def test_arrived_uses_two_metre_tolerance():

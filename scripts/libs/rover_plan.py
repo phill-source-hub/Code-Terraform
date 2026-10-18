@@ -17,10 +17,6 @@ ARRIVE_M = 2.0
 RETURN_MARGIN = 1.2
 RETURN_BUFFER_WH = 5.0
 DEFAULT_WH_PER_M = 0.05
-# Adjacent stops must sit close enough that any point in the map lies within sonar range of one.
-# The farthest point from its nearest stop of a square grid is spacing / sqrt(2), so a spacing of
-# 1.2 * range keeps every point within 0.85 * range.
-STOP_SPACING_FACTOR = 1.2
 
 # Drill Module tiers by hardness limit (manual, Drill Module and Item Catalog).
 DRILL_TIERS = {
@@ -63,34 +59,6 @@ def best_sonar(owned):
     if not usable:
         return None
     return max(usable, key=lambda sonar: SONAR_TIERS[sonar]["range_m"])
-
-
-def survey_stops(bounds, spacing):
-    """Grid stops covering the (min_x, max_x, min_y, max_y) box, in boustrophedon order.
-
-    Rows run left to right, then right to left, so the rover never crosses back over the map.
-    The last row and column land on the box edge, so the edge is covered too.
-    """
-    min_x, max_x, min_y, max_y = bounds
-    xs = _axis(min_x, max_x, spacing)
-    ys = _axis(min_y, max_y, spacing)
-    stops = []
-    for row, y in enumerate(ys):
-        ordered = xs if row % 2 == 0 else list(reversed(xs))
-        stops.extend((x, y) for x in ordered)
-    return stops
-
-
-def _axis(low, high, step):
-    if step <= 0:
-        raise ValueError("spacing must be positive")
-    values = []
-    value = low
-    while value < high:
-        values.append(value)
-        value += step
-    values.append(high)
-    return values
 
 
 def route_wh(metres, wh_per_m):
@@ -141,13 +109,15 @@ def choose_target(sites, *, drill_id, position, home, charge_wh, wh_per_m, cargo
     return None if best is None else best[1]
 
 
-def pending_contacts(points, blocked):
-    """Unscanned contacts that are not already known to be blocked.
+def pending_contacts(points, visited, origin=(0.0, 0.0)):
+    """Unscanned contacts not yet visited, nearest to `origin` first.
 
-    `points` are dicts with x, y, scanned. `blocked` is a set of (x, y). A blocked contact stays
-    unscanned after a sweep, so without this filter a retry loop would pick it again forever.
+    `points` are dicts with x, y, scanned. `visited` is a set of (x, y). A contact visited but
+    still unscanned was blocked (the sweep could not classify it), so it is not picked again.
+    Nearest-first keeps the first surveyed sites close to base, so mining can start early.
     """
-    return [p for p in points if not p["scanned"] and (p["x"], p["y"]) not in blocked]
+    left = [p for p in points if not p["scanned"] and (p["x"], p["y"]) not in visited]
+    return sorted(left, key=lambda p: distance(origin, (p["x"], p["y"])))
 
 
 def calibrated_wh_per_m(current, measured_wh, metres):
