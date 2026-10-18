@@ -232,15 +232,26 @@ def pick_target(locations, needed, explore):
     return None
 
 
+def short_text(needed):
+    """Compact "fragment:count" list for the status line, clipped so the line stays valid."""
+    parts = [fragment_id + ":" + str(count) for fragment_id, count in needed.items()]
+    return ", ".join(parts) if parts else "none"
+
+
+def say(message, level):
+    # The game rejects status text over 240 characters and then stops the script.
+    set_status(message[:240], level)
+
+
 def blocked(message):
     print("warning: " + message)
-    set_status(message, "warn")
+    say(message, "warn")
     sleep(PAUSE_SECONDS)
 
 
 while True:
     if self.cargo is not None:
-        set_status("holding a specimen for the Bio Lab", "info")
+        say("holding a specimen for the Bio Lab", "info")
         sleep(RETRY_SECONDS)
         continue
 
@@ -263,9 +274,9 @@ while True:
     target = pick_target(locations, needed, explore)
     # Shown on the status line so a wrong pick can be traced to its inputs: the units still
     # short per fragment, and whether the pick is for an order or an exploration.
-    reason = "short " + str(needed) + ", explore " + str(explore)
+    reason = "short " + short_text(needed) + ", explore " + str(explore)
     if target is None:
-        set_status("idle, nothing picked (" + reason + ")", "info")
+        say("idle, nothing picked (" + reason + ")", "info")
         sleep(PAUSE_SECONDS)
         continue
     if target.cataloged:
@@ -275,7 +286,7 @@ while True:
 
     result = self.collect(target.coords)
     if result.status == "ok":
-        set_status("collected " + reason + ", " + str(target.distance) + " m", "info")
+        say("collected " + reason + ", " + str(target.distance) + " m", "info")
     elif result.status == "busy":
         sleep(RETRY_SECONDS)
     else:

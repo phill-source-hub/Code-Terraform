@@ -148,8 +148,40 @@ def test_status_names_the_order_fragment_and_the_shortfall_it_was_picked_for():
     owner.collect = collect
     run_loop(SCRIPT, game, owner)
     assert game.statuses[0][0] == (
-        "collected order: ms_chelicera (short {'ms_chelicera': 1}, explore True), 1.0 m"
+        "collected order: ms_chelicera (short ms_chelicera:1, explore True), 1.0 m"
     )
+
+
+def test_status_stays_within_the_game_limit_when_many_fragments_are_short():
+    # Regression: a long shortfall dict pushed the status over 240 characters, which stopped
+    # the script. The fake game now rejects such a status, so this run must not raise.
+    needed_ids = [
+        "gw_cranial_plate",
+        "vc_dorsal_carapace",
+        "oc_cranium",
+        "bw_skull",
+        "vd_bell",
+        "mh_fruiting_body",
+        "hs_mandible",
+        "ms_chelicera",
+        "hc_aperture_lip",
+        "ma_cranial_papilla",
+        "gm_compound_eye",
+        "fs_calyx_plate",
+        "sd_cranial_crest",
+        "ce_stalked_eye",
+    ]
+    locations = [loc([0.0, 0.0], True, needed_ids[0])]
+    owner, game = setup(locations, orders=[order({fid: 3 for fid in needed_ids})])
+
+    def collect(coords):
+        owner.cargo = specimen(coords)
+        return SimpleNamespace(status="ok", message="")
+
+    owner.collect = collect
+    run_loop(SCRIPT, game, owner)
+    assert all(len(message) <= 240 for message, _ in game.statuses)
+    assert game.statuses[0][0].startswith("collected order: gw_cranial_plate")
 
 
 def test_an_open_order_still_collects_its_identified_fragment_when_all_are_known():
