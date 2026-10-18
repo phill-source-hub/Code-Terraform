@@ -16,7 +16,8 @@ import math
 ARRIVE_M = 2.0
 RETURN_MARGIN = 1.2
 RETURN_BUFFER_WH = 5.0
-DEFAULT_WH_PER_M = 0.05
+# About 0.1 Wh/m at half throttle: the manual's ~20 h per charge at 50 m/h (in-game reading).
+DEFAULT_WH_PER_M = 0.1
 
 # Drill Module tiers by hardness limit (manual, Drill Module and Item Catalog).
 DRILL_TIERS = {

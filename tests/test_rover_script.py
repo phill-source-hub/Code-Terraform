@@ -399,3 +399,17 @@ def test_rover_at_low_charge_drives_home_and_recharges():
     _run_rover(game, rover)
 
     assert world["scans"] == [True]
+
+
+def test_rover_surveys_contact_nearest_its_position_not_base():
+    # Rover at (300, 0): (250, 0) is 50 m away, while (-30, 40) is nearer base but 330 m off.
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _world(game, contacts=[_contact(-30, 40), _contact(250, 0)])
+    targets = []
+    rover = _rover([], modules=[_slot(2, "drill_basic", "drill_module")], targets=targets)
+    rover.nav.get_position = lambda: SimpleNamespace(x=300.0, y=0.0)
+
+    _run_rover(game, rover)
+
+    assert targets[0] == (250, 0)

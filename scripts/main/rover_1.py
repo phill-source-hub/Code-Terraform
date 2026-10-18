@@ -1,4 +1,4 @@
-"""Rover: survey contacts nearest base first, and mine as soon as a surveyed site is in reach.
+"""Rover: survey the contact nearest the rover, and mine as soon as a surveyed site is in reach.
 
 Where it runs: machine script slot `rover_1` (self = this rover). Needs Nav, Sonar, Drill mounted.
 Imports the `rover_plan` Library for contact order, tier choice, target choice and energy gates.
@@ -7,7 +7,8 @@ Loop, one pass per tick:
        the hold to Inventory and swap in the best drill from Base Inventory. Then drive to the best
        site, mine until the hold is full or the return reserve is reached, and drive home.
     2. Survey, once per pass after a mining trip, or whenever nothing is mineable. Visit the
-       unscanned contact nearest base, scan there, survey productive hits, and save the map.
+       unscanned contact nearest its current position, scan there, survey productive hits, and save
+       the map.
        Every contact is visited at most once. A contact still unscanned after its visit is blocked.
     3. Rest, when nothing is mineable and no contact is left.
 The map (base at 0, 0, bounds, contacts, sites) is saved to the Data Archive as MAP_KEY after every
@@ -19,8 +20,9 @@ Recharge: any leg that would leave less charge than the way home needs first goe
     The Charging Station's script (charging_station_1) charges the parked rover.
 Bounds: every drive stops on arrival, on a stall, on the tick limit or on low charge. Every wait
     has a tick limit. Nothing here calls a game action that the status literal does not confirm.
-Why nearest first: contacts are already on the map (manual, Nocturna), so no grid is needed to
-    find them. Visiting near ones first makes the first mining trip short and cheap.
+Why nearest to the rover: contacts are already on the map (manual, Nocturna), so no grid is needed
+    to find them. Ordering from base sent the rover back and forth across the map; ordering from the
+    rover's position keeps each leg short. The charge check still gates every leg.
 API facts relied on (docs/game/rover.md, manual): self.nav.set_target, set_throttle, brake,
     get_distance_to, get_position; self.sonar.scan, survey, range; self.drill.mine;
     self.battery.level, wh; self.is_being_rescued; self.cargo.count, stacks;
@@ -263,8 +265,8 @@ def save_map():
 
 
 def survey_next(state):
-    """Visit the unscanned contact nearest base. True if a contact was visited."""
-    pending = pending_contacts([_point(p) for p in contacts()], state["visited"], HOME)
+    """Visit the unscanned contact nearest the rover. True if a contact was visited."""
+    pending = pending_contacts([_point(p) for p in contacts()], state["visited"], position())
     if not pending:
         return False
     point = pending[0]
