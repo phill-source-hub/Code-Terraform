@@ -426,3 +426,14 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
 |      | fe9a45c      |        |       |
+
+### R-007: Map markers (`rover_1`, Cartography)
+
+- Setup: Cartography research unlocked (`get_component("markers")` is not None). Rover running.
+- Expected: a `Base` marker at 0, 0 (icon star). After each survey visit, one marker per contact with id `survey.rover_1.c:<x>:<y>`: resource (green) for minerals, circle (grey) for inert, warning (amber, label `blocked`) for contacts the sonar could not classify.
+- Pass: marker count rises with each visit and does not double on a restart (the same ids are rewritten). No `marker ...` warnings.
+- Fail signs: `marker limit_reached` warning (256-marker cap, map full); `marker invalid_key` (id not accepted; paste it).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |

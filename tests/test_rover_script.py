@@ -293,3 +293,35 @@ def test_rover_far_from_base_on_low_charge_drives_home_without_error():
 
     assert scans == []
     assert len(sleeps) >= 100
+
+
+def test_rover_places_base_and_scanned_contact_markers():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    placed = []
+    contact = _contact(-30, 40)
+    _world(game, contacts=[contact])
+    game.components["markers"] = FakeComponent(
+        "markers", "markers", {"place": lambda *args: (placed.append(args), _ok())[1]}
+    )
+    rover = _rover([], modules=[_slot(2, "drill_basic", "drill_module")])
+
+    def scan():
+        contact.scanned = True
+        contact.kind = "inert"
+        return SimpleNamespace(status="ok", message="", sites=[])
+
+    rover.sonar.scan = scan
+
+    _run_rover(game, rover)
+
+    assert placed[0] == (
+        "survey.rover_1.base",
+        0,
+        0,
+        "Base",
+        "star",
+        "accent",
+        "All rover coordinates start here.",
+    )
+    assert ("survey.rover_1.c:-30:40", -30, 40, "inert", "circle", "neutral", "") in placed

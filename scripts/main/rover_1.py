@@ -11,7 +11,10 @@ Loop, one pass per tick:
        Every contact is visited at most once. A contact still unscanned after its visit is blocked.
     3. Rest, when nothing is mineable and no contact is left.
 The map (base at 0, 0, bounds, contacts, sites) is saved to the Data Archive as MAP_KEY after every
-    survey visit, so it grows as the rover works. Nothing is printed except the save summary.
+    survey visit, so it grows as the rover works. Each visited contact also gets a map marker
+    (Cartography) under MARKER_PREFIX, keyed by its coordinates, so a restart rewrites it. Markers
+    are placed one at a time and never cleared, so a half-finished run cannot empty the map.
+    Mining and survey results are printed to the console.
 Recharge: any leg that would leave less charge than the way home needs first goes home and waits.
     The Charging Station's script (charging_station_1) charges the parked rover.
 Bounds: every drive stops on arrival, on a stall, on the tick limit or on low charge. Every wait
@@ -24,7 +27,8 @@ API facts relied on (docs/game/rover.md, manual): self.nav.set_target, set_throt
     self.output.connect, send; self.modules(),
     self.mount, self.unmount (MountSlot .index .type .module_id); get_component("nocturna")
     .get_bounds, points_of_interest; get_component("journal").discovered_sites, surveyed_sites;
-    get_component("notebook").set; get_component("inventory").count; sleep, set_status.
+    get_component("notebook").set; get_component("inventory").count;
+    get_component("markers").place (Cartography; None until researched); sleep, set_status.
 """
 
 from rover_plan import (
@@ -44,6 +48,17 @@ from rover_plan import (
 
 MAP_KEY = "rover.map"
 RATE_KEY = "rover.wh_per_m"
+# Ids carry the controlling machine, so this script's markers never collide with another's (manual).
+MARKER_PREFIX = "survey.rover_1."
+CONTACT_LOOK = {
+    "mineral": ("resource", "success"),
+    "inert": ("circle", "neutral"),
+    "biomass": ("flag", "accent"),
+    "thermal": ("power", "accent"),
+    "water": ("fluid", "accent"),
+    "oil": ("power", "accent"),
+    "exotic": ("star", "violet"),
+}
 HOME = (0.0, 0.0)
 CRUISE = 0.5
 TICK_S = 1
@@ -93,6 +108,9 @@ def drive_to(x, y, wh_per_m):
             best = self.nav.get_distance_to(HOME[0], HOME[1])
             stalled = 0
             set_status("low charge; heading home", "warn")
+            # Hold this tick: the distance read above is to the old target, not to base.
+            sleep(TICK_S)
+            continue
         if remaining < best:
             best = remaining
             stalled = 0
@@ -172,6 +190,45 @@ def contacts():
     return get_component("nocturna").points_of_interest()
 
 
+def contact_now(x, y):
+    for p in contacts():
+        if p.x == x and p.y == y:
+            return p
+    return None
+
+
+def mark_contact(state, point, result):
+    """Place or rewrite the map marker for a contact after its visit. Quiet once the map is full."""
+    markers = get_component("markers")
+    if markers is None or state["markers_full"]:
+        return
+    key = MARKER_PREFIX + "c:" + str(point["x"]) + ":" + str(point["y"])
+    now = contact_now(point["x"], point["y"])
+    if now is not None and now.scanned:
+        icon, color = CONTACT_LOOK.get(now.kind, ("flag", "accent"))
+        label, note = now.kind, ""
+    else:
+        icon, color, label = "warning", "warning", "blocked"
+        note = "Not classified (visit result: " + result + ")."
+    placed = markers.place(key, point["x"], point["y"], label, icon, color, note)
+    if placed.status == "limit_reached":
+        state["markers_full"] = True
+        set_status("map has no room for more markers; rover markers stop", "warn")
+    elif placed.status != "ok":
+        set_status("marker " + placed.status + ": " + placed.message, "warn")
+
+
+def place_base():
+    markers = get_component("markers")
+    if markers is None:
+        return
+    placed = markers.place(
+        MARKER_PREFIX + "base", 0, 0, "Base", "star", "accent", "All rover coordinates start here."
+    )
+    if placed.status != "ok":
+        set_status("base marker " + placed.status + ": " + placed.message, "warn")
+
+
 def _point(p):
     return {"x": p.x, "y": p.y, "scanned": p.scanned, "kind": p.kind}
 
@@ -219,6 +276,7 @@ def survey_next(state):
     state["visited"][key] = True
     if result == "arrived":
         scan_here()
+    mark_contact(state, point, result)
     save_map()
     return True
 
@@ -293,9 +351,10 @@ def mine_units(units, state):
     return mined
 
 
-def mineral_sites():
+def mineral_sites(state):
     journal = get_component("journal")
-    return [site_record(s) for s in journal.surveyed_sites("nocturna") if s.kind() == "mineral"]
+    sites = [site_record(s) for s in journal.surveyed_sites("nocturna") if s.kind() == "mineral"]
+    return [s for s in sites if s["id"] not in state["skip"]]
 
 
 def mine_cycle(state):
@@ -308,7 +367,7 @@ def mine_cycle(state):
         set_status("no drill mounted; resting", "warn")
         return False
     pick = choose_target(
-        mineral_sites(),
+        mineral_sites(state),
         drill_id=drill_id,
         position=position(),
         home=HOME,
@@ -325,6 +384,10 @@ def mine_cycle(state):
         return True
     mined = mine_units(pick["units"], state)
     print("mined " + str(mined) + " from " + site["id"])
+    if mined == 0:
+        # Without this, a site that yields nothing (no power, not at site) is picked every pass.
+        state["skip"][site["id"]] = True
+        set_status("no ore from " + site["id"] + "; skipping it", "warn")
     if visit(HOME[0], HOME[1], state) == "arrived":
         unload_cargo()
     return True
@@ -346,7 +409,8 @@ def start_rate():
 
 
 def main():
-    state = {"wh_per_m": start_rate(), "visited": {}}
+    state = {"wh_per_m": start_rate(), "visited": {}, "skip": {}, "markers_full": False}
+    place_base()
     while True:
         if mine_cycle(state):
             # Survey one contact after each trip, so the map keeps growing while mining.
