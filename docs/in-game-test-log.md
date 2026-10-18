@@ -126,12 +126,12 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ### B-001: Bio Collector (`bio_collector_1`)
 
-- Script: `scripts/main/bio_collector_1.py` (applied 2026-10-17, replacing the `Help me` request).
-- Setup: collector powered; Bio Lab at the same outpost; some fragments not yet cataloged.
+- Script: `scripts/main/bio_collector_1.py` (rewritten 2026-10-18: multi-item orders, stock and in-flight counted, idle when nothing is needed).
+- Setup: collector powered; Bio Lab at the same outpost; an open Bio Order for this outpost's biome with two or more fragments, at least one not yet in stock.
 - Run: Run Script in Game on `bio_collector_1`.
-- Expected: status `collecting <distance> away` (info). Then a specimen in the collector cargo. Cargo is not collected again until the Lab takes it.
-- Pass: exactly one collect per specimen; no `cargo_occupied` error; nearest uncataloged fragment is chosen first.
-- Fail signs: `collect cargo_occupied` or `collect busy` repeating (paste the status).
+- Expected: status `collected a specimen <distance> m away` (info) per specimen, then `holding a specimen for the Bio Lab` while cargo is full.
+- Pass: with an order needing fragments A and B (A already in Inventory), the collector moves on to B and does not collect A again. Once every needed unit is in flight or in stock, it explores unknown locations or goes idle with `no fragment to collect for the open Bio Orders`.
+- Fail signs: `collect cargo_occupied` or `collect busy` repeating (paste the status); the same fragment collected more times than the order requires.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
@@ -139,14 +139,16 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ### B-002: Bio Lab (`bio_lab_1`)
 
-- Script: `scripts/main/bio_lab_1.py`.
-- Setup: B-001 passed (specimen in collector cargo). Reagents for the specimen's recipe in home Inventory. Auto Feeders researched.
+- Script: `scripts/main/bio_lab_1.py` (rewritten 2026-10-18: buys missing reagents, ejects stray input, unloads wrong reagents, ships output first).
+- Setup: B-001 passed (specimen in collector cargo). Shop has the recipe's reagents at the prices in `docs/game/manual/242-lab-reagents.md`. Auto Feeders researched. Lab at Nocturna Base.
 - Run: Run Script in Game on `bio_lab_1`.
-- Expected status sequence: `sample shipped` (info) once per specimen. Before that, possibly `stock <reagent>: <status>` if reagents are missing (warn, paste it).
-- Pass: the chamber takes the specimen, analyzes it, loads reagents from Inventory, extracts one sample, the sample reaches Inventory, and the chamber is empty again.
+- Expected status sequence per specimen: `specimen taken from the collector`, `analyzed <name>`, `bought <reagent>` (only if Inventory was short), `staging <reagent>`, `loaded <reagent>`, `sample staged for shipping`, `sample shipped` is NOT printed (ship is silent); the sample then appears in Inventory.
+- Pass: one sample per specimen reaches Inventory; the chamber is empty again; the output is empty; the input holds no reagent.
+- Test 2 (restart): stop the script after `loaded <reagent>`, then run it again. It must resume the same specimen, not buy the reagent twice, and not extract a second sample.
+- Test 3 (no credits): set credits below the shortfall. Expect `warning: buy <reagent>: insufficient_credits`, the specimen kept, and no `extract`.
 - 2026-10-17 (owner report): samples stuck in the output port. Scripted `send` needs Auto Feeders, so the port could not drain and extraction kept going. Fixed: the lab ships the output first, extracts only when the output is empty, and discards the specimen only after a successful ship. Until Auto Feeders is researched, a refused send is shown as `output not shipped: research_required`, and the specimen is kept.
 - 2026-10-17 (Auto Feeders unlocked): intermittent failures. Log showed no take or reagent messages, because those were status-only. Now every blocked step is printed as `warning: ...`. Load uses the amount the take moved. Any other reagent in the input is ejected before a take, since the port holds one reagent type at a time. `discard` returning `input_empty` is expected and not a warning.
-- ASSUMPTION to check: one sample per specimen. If the lab extracts again from the same specimen before discarding, or the discard fails, note it here.
+- Assumption to check: one sample per specimen. If the lab extracts again from the same specimen before discarding, or the discard fails, note it here. A discard that reports `output_full` leaves the specimen in place, and the next pass may extract again.
 
 | Date | Game version | Result | Notes |
 |------|--------------|--------|-------|
@@ -154,11 +156,12 @@ Prerequisites before any run: each machine powered; Auto Feeders researched (scr
 
 ### B-003: Bio Exchange (`bio_exchange_1`)
 
-- Script: `scripts/main/bio_exchange_1.py`.
+- Script: `scripts/main/bio_exchange_1.py` (rewritten 2026-10-18: multi-item orders, staged samples always delivered, surplus returned to Inventory, unfillable orders passed over).
 - Setup: B-002 has produced samples in Inventory. Nocturna Base only. At least one Bio Order not complete.
 - Run: Run Script in Game on `bio_exchange_1`.
-- Expected: `waiting for samples` (info) when none match; a delivery per matching sample; `order complete` (info) when the order is filled.
-- Pass: the first open order is assigned; matching samples are taken from Inventory and delivered; the order reaches `complete` and the reward is paid.
+- Expected: `staging <id> for <order>`, then `delivered toward <order>`, and `order complete: <order>` when filled. `waiting for samples for <order>` when stock is short.
+- Pass: an order with two fragments is filled with one of each, and the reward is paid. An order that needs a variant (glow or genes) that Inventory cannot supply is not assigned.
+- Restart test: stop the script while a sample is staged in its input, then run it again. It must deliver that sample, not get stuck.
 - Fail signs: `take <status>` or `deliver <status>` (warn), paste the status.
 
 | Date | Game version | Result | Notes |

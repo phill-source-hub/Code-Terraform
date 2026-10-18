@@ -204,3 +204,10 @@ Short, newest last. Format: date, decision, why.
 - Decision: a rest (scanner repeat, harvester cool-down) is split into steps of HEARTBEAT_STEP_SECONDS (30 game s) by `scripts/libs/pacing.py`, and the machine posts `status.<slot>` after each step. The scanner also posts after each sector. The base watch limit is STALE_SECONDS = 120 (four steps).
 - Why: the in-game base watch showed `scanner_1: silent for 64 s` on the Signal Bus. The scanner posted once per pass and then slept an hour, so the watch saw it as stopped for most of every hour. The 60 s limit was also shorter than the scanner's rest step.
 - Status: repo side done. In-game check: watch `base.alerts` stay empty during a scanner rest.
+
+## ADR-032: Bio scripts re-read machine state each pass; ports are drained, never flushed
+
+- Date: 2026-10-18
+- Decision: each Bio script (collector, Lab, Exchange) decides its next step from what the machines hold on that pass, takes one step, and checks the status. No decision is remembered in a local variable. Items left in a port are ejected to Inventory, never flushed. The Lab buys only the reagent shortfall, from the Shop, when Inventory does not hold it. The collector counts units already in stock, in flight and in the Lab chamber before it collects. The Exchange takes and delivers each sample against the whole order, so multi-fragment orders are filled in full.
+- Why: the manual's Long-Running Scripts page says a restart resets locals, but machine contents survive. The old scripts kept collecting the first required fragment after it was cataloged (they never subtracted stock), and the Exchange could leave a sample latched in its input after an order completed elsewhere, where it blocked every other order. Flush destroys items; eject keeps them.
+- Status: repo side done with tests (`tests/test_bio_*_script.py`). Game side UNVERIFIED until the Biology checklist in `docs/in-game-test-log.md` (B-001 to B-003) passes after the owner's sync go-ahead.
