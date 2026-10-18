@@ -100,6 +100,7 @@ def _rover(calls, *, modules, scans=None, targets=None):
         modules=lambda: modules,
         unmount=lambda index: (calls.append(("unmount", index)), _ok())[1],
         mount=lambda index, item: (calls.append(("mount", index, item)), _ok())[1],
+        is_being_rescued=lambda: False,
     )
 
 
@@ -266,3 +267,29 @@ def test_charge_station_reports_refused_rescue_once():
 
     assert len(dispatched) == 3
     assert game.statuses == [("rescue rover_1 station_offline: refused", "warn")]
+
+
+def test_rover_far_from_base_on_low_charge_drives_home_without_error():
+    # Low charge away from base sends the rover to recharge first. That path drives home, and it
+    # must pass the energy rate along. The rover here can never arrive, so the drive stalls and
+    # the script keeps running until the sleep limit stops it.
+    game = FakeGame()
+    sleeps = []
+
+    def sleep(seconds, /):
+        sleeps.append(seconds)
+        if len(sleeps) >= 100:
+            raise _Stop
+
+    game.sleep = sleep
+    _world(game, contacts=[_contact(-30, 40)])
+    scans = []
+    rover = _rover([], modules=[_slot(2, "drill_basic", "drill_module")], scans=scans)
+    rover.nav.get_position = lambda: SimpleNamespace(x=100.0, y=0.0)
+    rover.nav.get_distance_to = lambda x, y: ((100.0 - x) ** 2 + (0.0 - y) ** 2) ** 0.5
+    rover.battery = SimpleNamespace(level=lambda: 0.03, wh=lambda: 3.0)
+
+    _run_rover(game, rover)
+
+    assert scans == []
+    assert len(sleeps) >= 100

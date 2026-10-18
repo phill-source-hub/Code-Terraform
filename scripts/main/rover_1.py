@@ -113,9 +113,9 @@ def affordable(here, target, wh_per_m):
     return self.battery.wh() >= need
 
 
-def recharge_at_home():
+def recharge_at_home(wh_per_m):
     """Go home and wait for the station to charge the rover. True once charge reaches the target."""
-    if not arrived(distance(position(), HOME)) and not drive_to(HOME[0], HOME[1]):
+    if not arrived(distance(position(), HOME)) and not drive_to(HOME[0], HOME[1], wh_per_m):
         return False
     for _ in range(MAX_RECHARGE_TICKS):
         if self.battery.level() >= RECHARGE_LEVEL:
@@ -135,7 +135,7 @@ def visit(x, y, state):
     """
     wh_per_m = state["wh_per_m"]
     if not affordable(position(), (x, y), wh_per_m):
-        if not recharge_at_home():
+        if not recharge_at_home(wh_per_m):
             return "no_charge"
         if not affordable(position(), (x, y), wh_per_m):
             return "out_of_range"
