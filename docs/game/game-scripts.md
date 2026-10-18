@@ -10,7 +10,7 @@ Checked 2026-10-17 against the game folder `%APPDATA%\io.codeterraform.game\save
 | `corrupted_archive.py`, `data_tablet.py`, `terminal_breach.py`, `xenogenetics.py` | `scripts/contracts/` | same |
 | `pressure_1.py`, `pressure_2.py` | `scripts/main/` (generated from `scripts/templates/pressure_slot.py`) | same |
 | `scanner_1.py` | `scripts/main/` | same since the 2026-10-17 apply |
-| `solar_4.py`, `solar_5.py` | `scripts/main/` (plain copies of `solar_1.py`, ADR-033) | Were `Help me` placeholders; replaced by the owner-approved sync on 2026-10-18. Now identical to `solar_1.py` (docstring change only; game copy needs a re-sync). |
+| `solar_4.py`, `solar_5.py` | `scripts/main/` (plain copies of `solar_1.py`, ADR-033) | Were `Help me` placeholders; replaced by the owner-approved sync on 2026-10-18. Now identical to `solar_1.py`; re-synced to the game 2026-10-18 (hash matches). |
 | `lib/*.py` (7 files) | `scripts/libs/` | `power_status`, `relay_solver`, `solar_tracker`, `grid`, `trip_log`, `job_queue`, `base_watch` |
 
 ## Tracked, game copy differs (sync conflict, skipped)
