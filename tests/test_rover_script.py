@@ -1,4 +1,4 @@
-"""Adapter tests: rover_1 and charge_station_1 against fakes of the rover and the station.
+"""Adapter tests: rover_1 and charging_station_1 against fakes of the rover and the station.
 
 The scripts loop forever. Each test ends the loop by raising _Stop from the first sleep it reaches,
 so the test sees exactly what the script did before it waited.
@@ -13,7 +13,7 @@ from tests.harness.fake_game import FakeComponent, FakeGame, run_script
 
 ROOT = Path(__file__).resolve().parent.parent
 ROVER = ROOT / "scripts" / "main" / "rover_1.py"
-STATION = ROOT / "scripts" / "main" / "charge_station_1.py"
+STATION = ROOT / "scripts" / "main" / "charging_station_1.py"
 sys.path.insert(0, str(ROOT / "scripts" / "libs"))
 
 

@@ -11,7 +11,7 @@ Phases:
        Base Inventory. Then pick the best surveyed site the mounted drill can cut, drive there,
        mine until the hold is full or the return reserve is reached, and drive home.
     3. Recharge: any leg that would leave less charge than the way home needs first goes home
-       and waits there. The Charging Station's script (charge_station_1) charges the parked rover.
+       and waits there. The Charging Station's script (charging_station_1) charges the parked rover.
 Bounds: every drive stops on arrival, on a stall, on the tick limit or on low charge. Every wait
     has a tick limit. Nothing here calls a game action that the status literal does not confirm.
 Why the reserve is checked at each visit: a rover that strands away from base is rescued slowly

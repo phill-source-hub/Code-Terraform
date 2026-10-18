@@ -1,9 +1,9 @@
-# Spec: Rover survey and mining (rover_1) and charging station (charge_station_1)
+# Spec: Rover survey and mining (rover_1) and charging station (charging_station_1)
 
 Status: in progress on `feat/rover-survey-mine`. Source: owner brief (Rover, Nav, Sonar, Drill, Journal, Proximity, Charging Station) and manual extracts in `docs/game/rover.md`. Build fe9a45c.
 
 - **Goal**: survey the whole Nocturna map first, save it with base at (0, 0), then mine the best reachable surveyed site and deliver ore home.
-- **Machine**: Rover `rover_1` (self), with Nav, Sonar and Drill mounted. Charging Station at base runs `charge_station_1`.
+- **Machine**: Rover `rover_1` (self), with Nav, Sonar and Drill mounted. Charging Station at base runs `charging_station_1`.
 - **Survey phase**: drive a grid of stops spaced at 1.2 × sonar range, scan at each stop and survey productive contacts. Then visit each unresolved contact once; a contact still unscanned after its visit is blocked and not revisited. Survey runs once, unless the Data Archive already holds `rover.map`.
 - **Map**: `rover.map` in the Data Archive (unlocked): base, bounds from `nocturna.get_bounds()`, every contact, every classified site. Also printed.
 - **Drill swap**: at base, `self.modules()` finds the drill slot. The highest drill tier in Base Inventory (`drill_module` < `drill_module_industrial` < `drill_module_heavy`) is mounted. The old drill is unmounted first. Slot compatibility is left to the game: a `slot_not_compatible` result keeps the current drill. Research upgrades slot types (owner correction).
@@ -11,7 +11,7 @@ Status: in progress on `feat/rover-survey-mine`. Source: owner brief (Rover, Nav
 - **Energy**: not in the manual. Start at 0.05 Wh/m and calibrate from each leg (battery drop over metres driven). Legs under 10 m do not calibrate.
 - **Recharge**: a visit that would leave less charge than the trip, the way home, and one scan's headroom goes home first and waits. Home is the Charging Station. Wait ends at 90%, or after a tick limit with a warning.
 - **Unload**: home Inventory via `self.output.connect("inventory")` and `send` per stack, parked at base only. A close Storage Bin is not used in v1.
-- **Charging station**: `charge_station_1` queues each docked vehicle to 100%. A vehicle already charging or queued is not queued again. A rover cannot charge itself (charge() is self-only on the station).
+- **Charging station**: `charging_station_1` queues each docked vehicle to 100%. A vehicle already charging or queued is not queued again. A rover cannot charge itself (charge() is self-only on the station).
 - **Safety**: every loop and wait is bounded; drives stop on arrival, stall, low charge (10%) or tick limit; `brake()` before scan, survey, mine and transfer; every result's `.status` is checked; `sleep()` for pacing.
 
 ## Success criteria

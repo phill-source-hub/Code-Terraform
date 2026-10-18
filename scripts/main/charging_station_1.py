@@ -1,6 +1,6 @@
 """Charging station: keep every rover or Pioneer parked at this station charging to full.
 
-Where it runs: machine script slot `charge_station_1` (self = the station, Mk II or Mk III).
+Where it runs: machine script slot `charging_station_1` (self = the station, Mk II or Mk III).
 Why: a rover cannot charge itself. charge() is self-only on the station, so this script queues
     each docked vehicle. A vehicle already charging, queued or full is left alone, so the queue
     is not refilled every poll.
