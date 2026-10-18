@@ -179,8 +179,11 @@ def _station(*, docked=(), states=None, charged=None, rescuing=False, dispatch=N
     return station, charged, dispatched
 
 
-def _stranded_rover(game, status="stranded"):
-    game.components["rover_1"] = FakeComponent("rover_1", "rover", {"status": lambda: status})
+def _stranded_rover(game, status="stranded", level=1.0):
+    battery = SimpleNamespace(level=lambda: level, wh=lambda: level * 100)
+    game.components["rover_1"] = FakeComponent(
+        "rover_1", "rover", {"status": lambda: status, "battery": battery}
+    )
 
 
 def _run_station(game, station):
@@ -325,3 +328,74 @@ def test_rover_places_base_and_scanned_contact_markers():
         "All rover coordinates start here.",
     )
     assert ("survey.rover_1.c:-30:40", -30, 40, "inert", "circle", "neutral", "") in placed
+
+
+def test_charge_station_sends_drone_to_low_rover_away_from_base():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _stranded_rover(game, status="idle", level=0.09)
+    station, _, dispatched = _station()
+
+    _run_station(game, station)
+
+    assert dispatched == [("rover_1", 1.0)]
+
+
+def test_charge_station_leaves_docked_low_rover_to_the_queue():
+    game = FakeGame()
+    _stop_at_first_sleep(game)
+    _stranded_rover(game, status="charging", level=0.05)
+    station, charged, dispatched = _station(docked=["rover_1"])
+
+    _run_station(game, station)
+
+    assert dispatched == []
+    assert charged == [("rover_1", 1.0)]
+
+
+def test_rover_at_low_charge_drives_home_and_recharges():
+    # Regression: the low-charge break used to stop the drive home at 10%, leaving the rover idle.
+    # The fake world moves the rover 10 m a tick, drains 0.05 Wh/m, and refills it at base.
+    game = FakeGame()
+    world = {"pos": [100.0, 0.0], "target": (0.0, 0.0), "wh": 10.0, "scans": []}
+    _world(game, contacts=[_contact(-30, 40)])
+
+    def dist(x, y):
+        return ((world["pos"][0] - x) ** 2 + (world["pos"][1] - y) ** 2) ** 0.5
+
+    ticks = {"n": 0}
+
+    def sleep(seconds, /):
+        # Cap the run so a rover that never gets home fails the test instead of looping forever.
+        ticks["n"] += 1
+        if world["scans"] or ticks["n"] > 2000:
+            raise _Stop
+        tx, ty = world["target"]
+        d = dist(tx, ty)
+        if d > 0:
+            step = min(10.0, d)
+            px, py = world["pos"]
+            world["pos"] = [px + (tx - px) * step / d, py + (ty - py) * step / d]
+            world["wh"] -= step * 0.05
+        if dist(0.0, 0.0) < 2.0:
+            world["wh"] = 100.0
+
+    game.sleep = sleep
+    rover = _rover([], modules=[_slot(2, "drill_basic", "drill_module")], scans=world["scans"])
+
+    def set_target(x, y):
+        world["target"] = (x, y)
+        return _ok()
+
+    rover.nav = SimpleNamespace(
+        get_position=lambda: SimpleNamespace(x=world["pos"][0], y=world["pos"][1]),
+        get_distance_to=lambda x, y: dist(x, y),
+        set_target=set_target,
+        set_throttle=lambda p: _ok(),
+        brake=lambda: _ok(),
+    )
+    rover.battery = SimpleNamespace(level=lambda: world["wh"] / 100, wh=lambda: world["wh"])
+
+    _run_rover(game, rover)
+
+    assert world["scans"] == [True]

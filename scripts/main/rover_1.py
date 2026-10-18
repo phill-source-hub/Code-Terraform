@@ -64,8 +64,9 @@ CRUISE = 0.5
 TICK_S = 1
 STALL_TICKS = 30
 MAX_DRIVE_TICKS = 3600
-# Low enough to stop a drive before the battery is empty, high enough to leave room to come home.
-LOW_LEVEL = 0.1
+# At or below this, the rover is out of reach of a normal return. Shared with the station's
+# rescue rule (charging_station_1), so both agree on when a rover needs fetching.
+RESCUE_LEVEL = 0.1
 RECHARGE_LEVEL = 0.9
 MAX_RECHARGE_TICKS = 7200
 # One scan and one survey, with headroom: a visit must leave this much spare beyond the trip.
@@ -116,7 +117,9 @@ def drive_to(x, y, wh_per_m):
             stalled = 0
         else:
             stalled += 1
-        if stalled >= STALL_TICKS or self.battery.level() <= LOW_LEVEL:
+        # No low-charge break here: that stopped the drive home too, and left the rover idle at
+        # 10%. A drive that cannot make progress ends on the stall check instead.
+        if stalled >= STALL_TICKS:
             break
         sleep(TICK_S)
     # Brake before any stationary action; the manual says arrival alone does not stop the rover.
@@ -269,7 +272,9 @@ def survey_next(state):
     set_status("survey " + str(len(pending)) + " contacts left", "info")
     result = visit(point["x"], point["y"], state)
     if result == "no_charge":
-        # Not marked: the same contact is tried again once the rover has charge.
+        # Not marked: the same contact is tried again once the rover has charge. The station
+        # sends a drone to a rover at or below RESCUE_LEVEL away from base.
+        set_status("waiting for charge away from base; rescue needed", "warn")
         return True
     # Marked visited for any other result, so an unreachable or stalled contact cannot hold the
     # loop. A restart clears the list and tries again.
