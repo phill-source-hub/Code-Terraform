@@ -12,6 +12,7 @@ from tests.harness.fake_comms import FakeSignalBus
 from tests.harness.fake_game import FakeGame
 from tests.harness.loop import ScriptStop, run_loop
 
+BUS_RESOLUTION = 16  # must match the probe's BUS_RESOLUTION
 PROBE = Path(__file__).resolve().parent.parent / "scripts" / "probes" / "probe_control_room.py"
 
 
@@ -86,7 +87,7 @@ def test_widgets_draw_and_every_check_passes_on_a_working_fake():
     assert _console(game, "text") == "probe text: PASS round trip ok\n"
     assert _console(game, "switch") == "probe switch: PASS round trip ok\n"
     assert _console(game, "mouse") == "probe mouse: PASS x=10 y=20\n"
-    assert _console(game, "bus") == "probe bus: PASS sizes 200, 2000, 9000 intact\n"
+    assert _console(game, "bus") == "probe bus: PASS accepts 9000 chars\n"
 
 
 def test_persist_row_turns_pass_on_the_second_tick():
@@ -112,18 +113,50 @@ def test_bus_is_skipped_when_research_is_missing():
     assert _console(game, "bus") == "probe bus: SKIP no Signal Bus: research not done\n"
 
 
-def test_bus_check_fails_when_a_payload_comes_back_changed():
+def _bus_with_limit(limit, *, mangle=False):
+    """A fake bus that rejects a payload longer than `limit` characters, as the game does."""
     bus = FakeSignalBus()
     original_send = bus.send
 
-    def mangling_send(channel, value):
-        value = dict(value, text=value["text"][:-1])
+    def send(channel, value):
+        if len(value["text"]) > limit:
+            return SimpleNamespace(status="invalid_value", message="too big", message_id=None)
+        if mangle:
+            value = dict(value, text=value["text"][:-1])
         return original_send(channel, value)
 
-    bus.send = mangling_send
-    game = _run(FakePanel(), bus=bus)
+    bus.send = send
+    return bus
 
-    assert _console(game, "bus") == "probe bus: FAIL payload 200 came back changed\n"
+
+def test_bus_bisects_to_the_real_limit_within_resolution():
+    game = _run(FakePanel(), bus=_bus_with_limit(limit=5000))
+
+    line = _console(game, "bus")
+    assert line.startswith("probe bus: PASS largest accepted about ")
+    assert "rejected at" in line
+    low = int(line.split("about ")[1].split(",")[0])
+    high = int(line.split("rejected at ")[1])
+    assert low <= 5000 < high
+    assert high - low <= BUS_RESOLUTION
+
+
+def test_bus_fails_when_the_floor_size_is_rejected():
+    game = _run(FakePanel(), bus=_bus_with_limit(limit=1000))
+
+    assert _console(game, "bus").startswith("probe bus: FAIL floor 2000 chars: invalid_value")
+
+
+def test_bus_fails_when_a_payload_comes_back_changed():
+    game = _run(FakePanel(), bus=_bus_with_limit(limit=10**6, mangle=True))
+
+    assert _console(game, "bus") == "probe bus: FAIL floor 2000 chars: came back changed\n"
+
+
+def test_bus_accepts_the_whole_range_when_there_is_no_real_limit():
+    game = _run(FakePanel(), bus=_bus_with_limit(limit=10**6))
+
+    assert _console(game, "bus") == "probe bus: PASS accepts 9000 chars\n"
 
 
 def test_click_row_waits_then_passes_once_a_click_is_seen():

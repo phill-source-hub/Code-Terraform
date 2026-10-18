@@ -9,6 +9,8 @@ Assumptions: argument shapes follow the game stub (`__builtins__.pyi`, VERIFIED 
 Run 1 (2026-10-18, panel_1.py): widgets FAILed on key order (key goes first); bus FAILed because
     the packet is a CommsMessage, so the check compares .value, not str(packet).
 Run 2: stopped with OverflowError at the 20000 payload (string limit 10,000). Sizes cut to 9000.
+Run 3: 9000 characters was rejected with invalid_value (the Signal Bus has its own size limit,
+    below 9000). Run 4 bisects to find it.
 Checks run once, on the first pass, and their results are kept in module state and drawn each tick:
     widgets  each named widget and primitive is drawn without error
     persist  module state survives between ticks (row turns PASS on the second tick)
@@ -16,7 +18,8 @@ Checks run once, on the first pass, and their results are kept in module state a
     switch   set_switch / get_switch round trip
     mouse    mouse() returns a value
     click    clicks() reports a click on empty card space (WAIT until you click)
-    bus      comms send / receive at payload sizes 200, 2000 and 9000 characters
+    bus      comms send / receive: 2000 characters must pass, then bisect up to 9000 to find
+             the largest payload the bus accepts
 Console: one line per check, "probe <name>: PASS|FAIL|SKIP|WAIT <detail>", printed when it is set.
 Safety: no machine is commanded. The bus check sends only to ctrl.probe.echo and drains that channel
     at the end, bounded by DRAIN_LIMIT.
@@ -26,9 +29,11 @@ API facts relied on (all UNVERIFIED until the in-game log passes): panel.clear, 
     with send, receive; print. Log results in docs/in-game-test-log.md (row PX-001).
 """
 
-# 9000 stays under the game's default string limit of 10,000 (Settings > Game > Advanced
-# Scripting). Run 2 hit that limit at 20000, so the probe does not go higher by default.
-PAYLOAD_SIZES = (200, 2000, 9000)
+# The game's default string limit is 10,000 (Settings > Game > Advanced Scripting). The Signal
+# Bus limit is lower and not documented in the stub, so the probe searches for it.
+BUS_FLOOR = 2000
+BUS_CEILING = 9000
+BUS_RESOLUTION = 16
 CHANNEL = "ctrl.probe.echo"
 # A probe loop still needs a bound, same rule as every loop in this repo.
 DRAIN_LIMIT = 50
@@ -92,24 +97,49 @@ def check_mouse():
     return "PASS", "x=" + str(position.x) + " y=" + str(position.y)
 
 
+def _probe_size(comms, size):
+    """Send one payload of `size` characters and take it back. Returns (accepted, detail)."""
+    value = {"req": size, "text": "x" * size}
+    sent = comms.send(CHANNEL, value)
+    if sent.status != "ok":
+        # A rejected send is never queued, so there is nothing to take back.
+        return False, sent.status
+    got = comms.receive(CHANNEL, sent.message_id)
+    if got.status != "ok":
+        return False, "receive " + got.status
+    # The packet is a CommsMessage; the sent dict is on its .value field.
+    if got.packet.value != value:
+        return False, "came back changed"
+    return True, "ok"
+
+
+def _largest_accepted(comms):
+    """Bisect between BUS_FLOOR (accepted) and BUS_CEILING. Returns (accepted, rejected) sizes."""
+    accepted, _ = _probe_size(comms, BUS_CEILING)
+    if accepted:
+        return BUS_CEILING, BUS_CEILING
+    low, high = BUS_FLOOR, BUS_CEILING
+    while high - low > BUS_RESOLUTION:
+        mid = (low + high) // 2
+        ok, _ = _probe_size(comms, mid)
+        if ok:
+            low = mid
+        else:
+            high = mid
+    return low, high
+
+
 def check_bus(comms):
     if comms is None:
         return "SKIP", "no Signal Bus: research not done"
-    sizes = []
-    for size in PAYLOAD_SIZES:
-        text = "x" * size
-        sent = comms.send(CHANNEL, {"req": size, "text": text})
-        if sent.status != "ok":
-            return "FAIL", "send " + str(size) + ": " + sent.status + " " + sent.message
-        got = comms.receive(CHANNEL, sent.message_id)
-        if got.status != "ok":
-            return "FAIL", "receive " + str(size) + ": " + got.status
-        # The packet is a CommsMessage; the sent dict is on its .value field.
-        if got.packet.value != {"req": size, "text": text}:
-            return "FAIL", "payload " + str(size) + " came back changed"
-        sizes.append(str(size))
+    ok, detail = _probe_size(comms, BUS_FLOOR)
+    if not ok:
+        return "FAIL", "floor " + str(BUS_FLOOR) + " chars: " + detail
+    low, high = _largest_accepted(comms)
     _drain(comms)
-    return "PASS", "sizes " + ", ".join(sizes) + " intact"
+    if low == high:
+        return "PASS", "accepts " + str(BUS_CEILING) + " chars"
+    return "PASS", "largest accepted about " + str(low) + ", rejected at " + str(high)
 
 
 def _drain(comms):
