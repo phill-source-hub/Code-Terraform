@@ -172,6 +172,7 @@ Short, newest last. Format: date, decision, why.
 
 - Date: 2026-10-17
 - Decision: each controller shared by several slots (solar, pressure) has one template in `scripts/templates/` with a `__SLOT__` token. `tools/render_slots.py` writes `scripts/main/<slot>.py` from it. `tests/test_render_slots.py` fails when a committed slot file no longer matches its template. The copy-parity tests are removed.
+- Superseded: by ADR-033 (solar) and ADR-034 (o2gen, pressure). The template, the renderer and its tests are removed.
 - Why: the game needs one file per slot, but the two copies were kept equal only by a text-replace test. A generator makes the template the single source, and the drift test makes a hand edit visible.
 - Supersedes: the duplicate-file rule of ADR-014 for these controllers.
 - Status: repo side done. Slot files unchanged in content. Sync is unchanged (it still copies `scripts/main/`). Solar retired from this template by ADR-033.
@@ -217,5 +218,13 @@ Short, newest last. Format: date, decision, why.
 - Date: 2026-10-18
 - Decision: every solar script is the same file, `scripts/main/solar_1.py`, copied to `solar_2` to `solar_5` (and to any later solar slot). The file names no slot. The solar template and its renderer entries are removed. `tests/test_solar_scripts_identical.py` fails if the copies differ or a copy names its slot. `self` is the generator the script runs on, so the script never reads a hard-coded id.
 - Why: the generated copies differed only in the docstring, but the drift check still had to run. A plain copy has no generator and no drift to manage, and adding a generator is one copy.
-- Supersedes: ADR-027 for the solar controller only. Pressure and o2gen stay on the template.
+- Supersedes: ADR-027 for the solar controller. ADR-034 applies the same rule to o2gen and pressure.
 - Status: repo side done. Game side UNVERIFIED until the owner's sync go-ahead and the S-001 row in `docs/in-game-test-log.md` passes on the copies.
+
+## ADR-034: O2 and pressure generator scripts are one file copied to each slot
+
+- Date: 2026-10-18
+- Decision: the o2gen and pressure controllers follow ADR-033. `scripts/main/o2gen_1.py` and `pressure_1.py` are the sources. Their copies (`o2gen_2`, `o2gen_3`, `pressure_2`, `pressure_3`, and any later slot) are byte-identical. The files name no slot, so `self` is the generator. The templates and `tools/render_slots.py` are removed, since nothing is left to render. `tests/test_controller_copies.py` covers all three families by glob.
+- Why: the slot files differed only in one docstring token, so the template and renderer existed only to keep identical files equal. A plain copy has no generator and no drift.
+- Supersedes: ADR-027 (the renderer and templates).
+- Status: repo side done. Game side UNVERIFIED until the owner's sync go-ahead. The sync copies the new text (docstring only) to the game for o2gen and pressure slots.
