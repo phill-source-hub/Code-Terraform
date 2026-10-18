@@ -355,3 +355,63 @@ Libraries created in game by the owner: power_status, solar_tracker, grid, trip_
 |------|--------------|--------|-------|
 | 2026-10-18 | fe9a45c | SYNCED | `heater_1.py` written to the game (owner go-ahead). Replaced the 7-byte "Help me" placeholder. Game file matches repo. Pending a heater placed and the H-001 to H-005 checks. |
 | 2026-10-18 | fe9a45c | PASS (H-005) | Owner: script stopped, heater power read 0. H-001 to H-004 still open. |
+
+## Rover (spec `docs/specs/rover.md`, branch feat/rover-survey-mine)
+
+### R-001: Library and script load (`rover_1`, `charging_station_1`)
+
+- Where it runs: Library `rover_plan` (created in game, Ship > Computer > Library, name `rover_plan`), machines `rover_1` and `charging_station_1`.
+- Setup: rover with Nav, Sonar and Drill mounted, parked at base. Charging Station at base, powered.
+- Run: Run Script in Game on `rover_1` and `charging_station_1`.
+- Expected: no `ModuleNotFoundError`. `rover_1` shows status `survey stop N of M`.
+- Pass: `tasks.ps1 status` shows both scripts running and no error in the last 200 log lines.
+- Fail signs: `No module named 'rover_plan'` (Library not created or misnamed).
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+| 2026-10-18 | fe9a45c | PASS | `rover_1` running after the Library was created (survey stop 1 of 961 on screen). Earlier `No module named 'rover_plan'` was before the Library existed. |
+
+### R-002: Survey and map save (`rover_1`)
+
+- Setup: R-001 passed. Data Archive unlocked.
+- Expected: one stop per grid point (`survey stop N of M`, M = 961 at first run). Each stop prints scan results. Unresolved contacts are visited once. At the end the console prints `map: <contacts> contacts, <sites> sites`.
+- Pass: the survey completes with no `scan <status>` warnings other than partial statuses. `rover.map` appears in Computer > Data Archive with `base` at x 0, y 0 and the contacts and sites lists.
+- Timing note: 961 stops at about 50 m/h takes a long game time. Record the start and end time, and the battery levels at each refill.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        | Running, stop 1 of 961 at battery 94%. |
+
+### R-003: Drill swap at base (`rover_1`)
+
+- Setup: Base Inventory holds a `drill_module_industrial` (or `drill_module_heavy`). Rover parked at base with a basic drill mounted.
+- Expected: after the first unload at base, the rover unmounts the basic drill and mounts the higher tier. Status `mount ... slot_not_compatible` if the slot type refuses it; the rover keeps the old drill.
+- Pass: `modules()` shows the higher tier in the drill slot, or the refusal is logged and the rover keeps mining.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-004: Mining and unload (`rover_1`)
+
+- Setup: R-002 passed (surveyed mineral site exists). Auto Feeders researched.
+- Expected: `mining <site id> (<item>)` status, then `mined <N> from <site id>`. At base, the rover prints nothing for a successful unload; a warning appears only on failure.
+- Pass: ore is in Inventory after the trip (`inventory.count(<item>)` rises by the mined amount). Cargo count returns to 0.
+- Fail signs: `unload no_connection`, `unload not_at_target`, `unload partial`. Paste the message.
+- Open probe: the drill's `not_at_site` tolerance. If `mine` returns `not_at_site`, paste the status line and the rover position.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
+
+### R-005: Recharge at base (`rover_1`, `charging_station_1`)
+
+- Setup: rover low on charge (or run until it returns), docked in the Charging Station's service area.
+- Expected: `charging_station_1` queues the docked rover to 100%. The rover status reads `charging at base: N%` until 90%, then resumes.
+- Pass: the rover's battery rises to about 100%, and the rover leaves base only after 90%.
+- Fail signs: `no charge at base; check the Charging Station` (warning). Check the station's queue with `status(vehicle_id)` and the station's warnings.
+- Measure: Wh used per metre on the first leg. Record the start and end battery levels with the distance driven. Compare with the 0.05 Wh/m default.
+
+| Date | Game version | Result | Notes |
+|------|--------------|--------|-------|
+|      | fe9a45c      |        |       |
