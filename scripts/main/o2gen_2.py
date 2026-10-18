@@ -1,6 +1,8 @@
 """Oxygen generator controller: peak efficiency, waste dumped only inside 50-60, no penalty.
 
-Where it runs: machine script slot `o2gen_2` (self = this generator). Mk I.
+Where it runs: every Mk I oxygen generator slot, including ones added later. The same file
+    runs on each one; `self` is the generator it runs on, so the file names no slot
+    (ADR-034). Copy it to add one; do not edit a copy by hand.
 Self-contained on purpose (ADR-014): no imports.
 Rules (manual, Oxygen Generator and Atmosphere):
     peak intake is exactly CO2 / 10 (ppt); efficiency is 100% at peak with waste at or below 60;

@@ -1,7 +1,7 @@
-"""Every solar slot runs the same file, so there is no per-slot copy to drift (ADR-033).
+"""Each controller runs as one file copied to every slot, so no copy can drift (ADR-034).
 
-Adding a generator means copying scripts/main/solar_1.py to solar_<n>.py. These tests pick up
-new copies by glob, so no list needs editing.
+Adding a slot means copying the family's first file (solar_1, o2gen_1, pressure_1) to the new
+name. These tests find copies by glob, so no list needs editing.
 """
 
 import re
@@ -10,19 +10,24 @@ from pathlib import Path
 import pytest
 
 MAIN = Path(__file__).resolve().parent.parent / "scripts" / "main"
-SOLAR_SCRIPTS = sorted(MAIN.glob("solar_*.py"))
+FAMILIES = ["solar", "o2gen", "pressure"]
+COPIES = {family: sorted(MAIN.glob(f"{family}_*.py")) for family in FAMILIES}
+ALL_COPIES = [script for family in FAMILIES for script in COPIES[family]]
 
 
-def test_there_is_at_least_one_solar_script():
-    assert SOLAR_SCRIPTS, "no scripts/main/solar_*.py found"
+@pytest.mark.parametrize("family", FAMILIES)
+def test_each_family_has_at_least_one_script(family):
+    assert COPIES[family], f"no scripts/main/{family}_*.py found"
 
 
-@pytest.mark.parametrize("script", SOLAR_SCRIPTS, ids=lambda p: p.name)
-def test_every_solar_script_is_byte_identical_to_the_first(script):
-    assert script.read_bytes() == SOLAR_SCRIPTS[0].read_bytes()
+@pytest.mark.parametrize("family", FAMILIES)
+def test_every_copy_is_byte_identical_to_the_family_source(family):
+    source = COPIES[family][0].read_bytes()
+    for script in COPIES[family]:
+        assert script.read_bytes() == source, script.name
 
 
-@pytest.mark.parametrize("script", SOLAR_SCRIPTS, ids=lambda p: p.name)
-def test_solar_script_does_not_name_its_own_slot(script):
+@pytest.mark.parametrize("script", ALL_COPIES, ids=lambda p: p.name)
+def test_copy_does_not_name_its_own_slot(script):
     # The slot is `self`; a hard-coded id would make the copies differ again.
-    assert not re.search(r"solar_\d", script.read_text(encoding="utf-8"))
+    assert not re.search(r"(solar|o2gen|pressure)_\d", script.read_text(encoding="utf-8"))

@@ -1,6 +1,8 @@
 """Pressure generator controller: one sync per sweep, inside the window that is open now.
 
-Where it runs: machine script slot `pressure_3` (self = this generator). Mk I.
+Where it runs: every Mk I pressure generator slot, including ones added later. The same file
+    runs on each one; `self` is the generator it runs on, so the file names no slot
+    (ADR-034). Copy it to add one; do not edit a copy by hand.
 Self-contained on purpose (ADR-014): no imports.
 Rules (manual, Pressure Generator):
     the gauge sweeps 0-100 and wraps. Each sweep has a sync window (next_window_low to
