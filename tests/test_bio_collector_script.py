@@ -95,6 +95,12 @@ def test_explores_nearest_uncataloged_fragment_when_no_order_needs_anything():
     assert first_collect(owner, game) == [1.0, 2.0]
 
 
+def test_stops_exploring_when_every_location_is_identified_and_no_order_is_open():
+    owner, game = setup([loc([0.0, 0.0], True, "gw_a"), loc([5.0, 5.0], True, "gw_b")])
+    assert first_collect(owner, game) is None
+    assert game.statuses[-1] == ("no fragment to collect for the open Bio Orders", "info")
+
+
 def test_collects_a_cataloged_fragment_the_open_order_still_needs():
     locations = [loc([0.0, 0.0], True, "gw_jaw_fang"), loc([5.0, 5.0])]
     owner, game = setup(locations, orders=[order({"gw_jaw_fang": 2})])

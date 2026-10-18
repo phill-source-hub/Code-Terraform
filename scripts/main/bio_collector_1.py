@@ -10,7 +10,10 @@ Target choice, in order:
        out per fragment for each open Bio Order in this outpost's biome:
            requires - delivered - in_transit - in Inventory - specimens already in flight
        The largest shortfall across the orders is used, so one fragment is never counted twice.
-    2. Otherwise explore: the nearest unknown location, so the Bio Lab can identify it.
+    2. Otherwise explore: the nearest unknown location, so the Bio Lab can identify it. This
+       continues whether or not an order is open, until every location in this biome is
+       identified. The owner's rule (2026-10-18): explore until all fragments are identified,
+       stop when no Bio Order is open and all are discovered.
     3. Otherwise idle and recheck later.
 Why not "first required fragment": the old script kept collecting the first required fragment
     after it was cataloged, because it never subtracted what the order already had.
