@@ -174,7 +174,7 @@ Short, newest last. Format: date, decision, why.
 - Decision: each controller shared by several slots (solar, pressure) has one template in `scripts/templates/` with a `__SLOT__` token. `tools/render_slots.py` writes `scripts/main/<slot>.py` from it. `tests/test_render_slots.py` fails when a committed slot file no longer matches its template. The copy-parity tests are removed.
 - Why: the game needs one file per slot, but the two copies were kept equal only by a text-replace test. A generator makes the template the single source, and the drift test makes a hand edit visible.
 - Supersedes: the duplicate-file rule of ADR-014 for these controllers.
-- Status: repo side done. Slot files unchanged in content. Sync is unchanged (it still copies `scripts/main/`).
+- Status: repo side done. Slot files unchanged in content. Sync is unchanged (it still copies `scripts/main/`). Solar retired from this template by ADR-033.
 
 ## ADR-028: Signal Bus carries jobs, announcements and heartbeats; no script blocks on it
 
@@ -211,3 +211,11 @@ Short, newest last. Format: date, decision, why.
 - Decision: each Bio script (collector, Lab, Exchange) decides its next step from what the machines hold on that pass, takes one step, and checks the status. No decision is remembered in a local variable. Items left in a port are ejected to Inventory, never flushed. The Lab buys only the reagent shortfall, from the Shop, when Inventory does not hold it. The collector counts units already in stock, in flight and in the Lab chamber before it collects. The Exchange takes and delivers each sample against the whole order, so multi-fragment orders are filled in full.
 - Why: the manual's Long-Running Scripts page says a restart resets locals, but machine contents survive. The old scripts kept collecting the first required fragment after it was cataloged (they never subtracted stock), and the Exchange could leave a sample latched in its input after an order completed elsewhere, where it blocked every other order. Flush destroys items; eject keeps them.
 - Status: repo side done with tests (`tests/test_bio_*_script.py`). Game side UNVERIFIED until the Biology checklist in `docs/in-game-test-log.md` (B-001 to B-003) passes after the owner's sync go-ahead.
+
+## ADR-033: Solar scripts are one file copied to each slot; the machine is `self`
+
+- Date: 2026-10-18
+- Decision: every solar script is the same file, `scripts/main/solar_1.py`, copied to `solar_2` to `solar_5` (and to any later solar slot). The file names no slot. The solar template and its renderer entries are removed. `tests/test_solar_scripts_identical.py` fails if the copies differ or a copy names its slot. `self` is the generator the script runs on, so the script never reads a hard-coded id.
+- Why: the generated copies differed only in the docstring, but the drift check still had to run. A plain copy has no generator and no drift to manage, and adding a generator is one copy.
+- Supersedes: ADR-027 for the solar controller only. Pressure and o2gen stay on the template.
+- Status: repo side done. Game side UNVERIFIED until the owner's sync go-ahead and the S-001 row in `docs/in-game-test-log.md` passes on the copies.

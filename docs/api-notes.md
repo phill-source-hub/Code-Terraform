@@ -41,6 +41,7 @@ The game's DOCS manual is the main reference. Stubs are generated per game build
 
 - VERIFIED (docs): `get_component(id)` returns the component or `None`. IDs are case-sensitive and stable. Use ids in long-running scripts.
 - VERIFIED (stub): every component has `.id` and `.type_id`.
+- UNVERIFIED: that `self` in a machine script is the generator and carries `.id`. The solar scripts rely on `self` for identity (ADR-033) and read no id. Check in game (S-001 row, 2026-10-18).
 - VERIFIED (docs): `power_control.set_powered(machine_id, on)` pauses or resumes that machine's scripts. Outcomes include `not_enough_power`.
 
 ## In-game evidence (VERIFIED ingame)
