@@ -54,6 +54,7 @@ def setup(
     lab_unreadable=False,
     collect_status="ok",
     with_exchange=True,
+    journal_ids=None,
 ):
     """Returns (owner, game)."""
     stock = stock or {}
@@ -75,6 +76,13 @@ def setup(
             type_id="bio_exchange",
             methods={"orders": lambda: list(orders)},
         )
+    if journal_ids is not None:
+        entries = [SimpleNamespace(fragment_id=fragment_id) for fragment_id in journal_ids]
+        game.components["journal"] = FakeComponent(
+            id="journal",
+            type_id="journal",
+            methods={"cataloged_fragments": lambda planet_id: list(entries)},
+        )
     if lab_unreadable:
         game.components["bio_lab_1"] = _UnreadableLab()
     else:
@@ -93,6 +101,45 @@ def first_collect(owner, game):
 def test_explores_nearest_uncataloged_fragment_when_no_order_needs_anything():
     owner, game = setup([loc([1.0, 2.0]), loc([3.0, 4.0])])
     assert first_collect(owner, game) == [1.0, 2.0]
+
+
+FROZEN = [
+    "gw_cranial_plate",
+    "vc_dorsal_carapace",
+    "oc_cranium",
+    "bw_skull",
+    "vd_bell",
+    "mh_fruiting_body",
+    "hs_mandible",
+    "ms_chelicera",
+    "hc_aperture_lip",
+    "ma_cranial_papilla",
+    "gm_compound_eye",
+    "fs_calyx_plate",
+    "sd_cranial_crest",
+    "ce_stalked_eye",
+    "st_scute_plate",
+    "vm_cephalic_horn",
+]
+
+
+def test_stops_exploring_once_every_frozen_fragment_type_is_in_the_journal():
+    # Regression: an unknown dot can be a type already cataloged elsewhere, so exploring
+    # after every type is known only wastes trips.
+    owner, game = setup([loc([1.0, 2.0])], journal_ids=FROZEN)
+    assert first_collect(owner, game) is None
+    assert game.statuses[-1] == ("no fragment to collect for the open Bio Orders", "info")
+
+
+def test_keeps_exploring_while_some_frozen_fragment_type_is_missing_from_the_journal():
+    owner, game = setup([loc([1.0, 2.0])], journal_ids=FROZEN[:-1])
+    assert first_collect(owner, game) == [1.0, 2.0]
+
+
+def test_an_open_order_still_collects_its_identified_fragment_when_all_are_known():
+    locations = [loc([0.0, 0.0], True, "gw_cranial_plate"), loc([2.0, 2.0])]
+    owner, game = setup(locations, orders=[order({"gw_cranial_plate": 1})], journal_ids=FROZEN)
+    assert first_collect(owner, game) == [0.0, 0.0]
 
 
 def test_stops_exploring_when_every_location_is_identified_and_no_order_is_open():

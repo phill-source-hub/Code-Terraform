@@ -11,9 +11,9 @@ Target choice, in order:
            requires - delivered - in_transit - in Inventory - specimens already in flight
        The largest shortfall across the orders is used, so one fragment is never counted twice.
     2. Otherwise explore: the nearest unknown location, so the Bio Lab can identify it. This
-       continues whether or not an order is open, until every location in this biome is
-       identified. The owner's rule (2026-10-18): explore until all fragments are identified,
-       stop when no Bio Order is open and all are discovered.
+       runs only while some fragment type of this biome is not yet in the Journal. An unknown
+       dot can turn out to be a type already cataloged elsewhere, so exploring after every type
+       is known only wastes trips. Orders still come first (step 1).
     3. Otherwise idle and recheck later.
 Why not "first required fragment": the old script kept collecting the first required fragment
     after it was cataloged, because it never subtracted what the order already had.
@@ -23,13 +23,112 @@ Assumption (UNVERIFIED, docs/api-notes.md): another script can read bio_lab_1.sp
 API facts relied on (docs/game/biology.md): self.scan(), self.collect(coords), self.cargo,
     self.outpost.biome, FragmentLocation .coords .distance .cataloged .fragment_id,
     Specimen .coords .fragment_id, BioOrder .id .biome .status .requires .delivered .in_transit,
-    bio_exchange.orders(), inventory.count(item_id), get_component, set_status, print, sleep.
+    bio_exchange.orders(), inventory.count(item_id), journal.cataloged_fragments(planet_id),
+    get_component, set_status, print, sleep.
 """
 
 PAUSE_SECONDS = 60
 RETRY_SECONDS = 5
 EXCHANGE_ID = "bio_exchange_1"
 LAB_ID = "bio_lab_1"
+JOURNAL_ID = "journal"
+# Journal planet id; the manual says the current planet is usually "nocturna".
+PLANET_ID = "nocturna"
+
+# Every fragment type per biome, from the manual's Biology Samples page (241). Used only to
+# decide whether exploring can still find something new.
+BIOME_FRAGMENTS = {
+    "frozen": [
+        "gw_cranial_plate",
+        "vc_dorsal_carapace",
+        "oc_cranium",
+        "bw_skull",
+        "vd_bell",
+        "mh_fruiting_body",
+        "hs_mandible",
+        "ms_chelicera",
+        "hc_aperture_lip",
+        "ma_cranial_papilla",
+        "gm_compound_eye",
+        "fs_calyx_plate",
+        "sd_cranial_crest",
+        "ce_stalked_eye",
+        "st_scute_plate",
+        "vm_cephalic_horn",
+    ],
+    "coastal": [
+        "gw_caudal_fin",
+        "vc_mandible_claw",
+        "oc_tentacle_arm",
+        "bw_foreclaw",
+        "vd_nematocyst",
+        "mh_spore_pod",
+        "hs_wing_membrane",
+        "ms_leg_tarsus",
+        "hc_shell_whorl",
+        "ma_cuticle_molt",
+        "gm_folded_wing",
+        "fs_arm_segment",
+        "sd_wing_membrane",
+        "ce_swimmeret_lobe",
+        "st_plastron_shard",
+        "vm_wing_sheet",
+    ],
+    "geothermal": [
+        "gw_cardiac_node",
+        "vc_antenna_cluster",
+        "oc_chitin_beak",
+        "bw_ribcage",
+        "vd_neural_mesh",
+        "mh_mycelium_root",
+        "hs_thorax_plate",
+        "ms_pedipalp",
+        "hc_septum_plate",
+        "ma_ganglion_node",
+        "gm_raptorial_claw",
+        "fs_stalk_columnal",
+        "sd_obsidian_scale",
+        "ce_mouth_disc",
+        "st_limb_claw",
+        "vm_gill_filament",
+    ],
+    "volcanic": [
+        "gw_jaw_fang",
+        "vc_walking_leg",
+        "oc_ink_sac",
+        "bw_hindlimb",
+        "vd_photophore",
+        "mh_chitin_node",
+        "hs_abdomen_segment",
+        "ms_abdomen_sclerite",
+        "hc_beak",
+        "ma_chitinous_seta",
+        "gm_abdominal_sheath",
+        "fs_oral_tegmen",
+        "sd_tail_barb",
+        "ce_great_appendage",
+        "st_beak",
+        "vm_tail_barb",
+    ],
+    "deep": [
+        "gw_spinal_vertebra",
+        "vc_eye_stalk",
+        "oc_lens_eye",
+        "bw_tail_spike",
+        "vd_tendril",
+        "mh_stigmatic_disc",
+        "hs_compound_eye",
+        "ms_eye_cluster",
+        "hc_tentacle_crown",
+        "ma_luminous_ring",
+        "gm_antennal_whip",
+        "fs_holdfast_rootlet",
+        "sd_talon",
+        "ce_cephalic_photophore",
+        "st_carapace_neural",
+        "vm_ventral_photophore",
+    ],
+}
 
 
 def open_orders(orders, biome):
@@ -103,10 +202,30 @@ def lab_specimen(lab):
         return None
 
 
-def pick_target(locations, needed):
+def cataloged_ids(journal):
+    """Fragment ids already in the Journal for this planet. None when the Journal is absent."""
+    if journal is None:
+        return None
+    return [entry.fragment_id for entry in journal.cataloged_fragments(PLANET_ID)]
+
+
+def exploring_can_help(biome, known):
+    """True while the biome has a fragment type the Journal does not hold yet.
+
+    An unknown biome, or no Journal, keeps exploring on: there is nothing to compare against.
+    """
+    if known is None or biome not in BIOME_FRAGMENTS:
+        return True
+    missing = [fragment_id for fragment_id in BIOME_FRAGMENTS[biome] if fragment_id not in known]
+    return len(missing) > 0
+
+
+def pick_target(locations, needed, explore):
     for location in locations:
         if location.cataloged and needed.get(location.fragment_id, 0) > 0:
             return location
+    if not explore:
+        return None
     for location in locations:
         if not location.cataloged:
             return location
@@ -139,7 +258,9 @@ while True:
         pending_counts([lab_specimen(lab)], locations),
     )
 
-    target = pick_target(locations, needed)
+    journal = get_component(JOURNAL_ID)
+    explore = exploring_can_help(self.outpost.biome, cataloged_ids(journal))
+    target = pick_target(locations, needed, explore)
     if target is None:
         set_status("no fragment to collect for the open Bio Orders", "info")
         sleep(PAUSE_SECONDS)
