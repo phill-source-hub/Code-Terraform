@@ -128,12 +128,28 @@ def test_stops_exploring_once_every_frozen_fragment_type_is_in_the_journal():
     # after every type is known only wastes trips.
     owner, game = setup([loc([1.0, 2.0])], journal_ids=FROZEN)
     assert first_collect(owner, game) is None
-    assert game.statuses[-1] == ("no fragment to collect for the open Bio Orders", "info")
+    assert game.statuses[-1][0].startswith("idle, nothing picked")
 
 
 def test_keeps_exploring_while_some_frozen_fragment_type_is_missing_from_the_journal():
     owner, game = setup([loc([1.0, 2.0])], journal_ids=FROZEN[:-1])
     assert first_collect(owner, game) == [1.0, 2.0]
+
+
+def test_status_names_the_order_fragment_and_the_shortfall_it_was_picked_for():
+    locations = [loc([0.0, 0.0], True, "ms_chelicera")]
+    owner, game = setup(locations, orders=[order({"ms_chelicera": 1})])
+
+    def collect(coords):
+        # A real collect leaves the specimen in cargo; the next pass then waits and stops.
+        owner.cargo = specimen(coords)
+        return SimpleNamespace(status="ok", message="")
+
+    owner.collect = collect
+    run_loop(SCRIPT, game, owner)
+    assert game.statuses[0][0] == (
+        "collected order: ms_chelicera (short {'ms_chelicera': 1}, explore True), 1.0 m"
+    )
 
 
 def test_an_open_order_still_collects_its_identified_fragment_when_all_are_known():
@@ -145,7 +161,7 @@ def test_an_open_order_still_collects_its_identified_fragment_when_all_are_known
 def test_stops_exploring_when_every_location_is_identified_and_no_order_is_open():
     owner, game = setup([loc([0.0, 0.0], True, "gw_a"), loc([5.0, 5.0], True, "gw_b")])
     assert first_collect(owner, game) is None
-    assert game.statuses[-1] == ("no fragment to collect for the open Bio Orders", "info")
+    assert game.statuses[-1][0].startswith("idle, nothing picked")
 
 
 def test_collects_a_cataloged_fragment_the_open_order_still_needs():
@@ -236,7 +252,7 @@ def test_idle_when_nothing_is_left_to_collect():
     locations = [loc([0.0, 0.0], True, "gw_a")]
     owner, game = setup(locations, orders=[order({"gw_a": 1})], stock={"gw_a": 1})
     run_loop(SCRIPT, game, owner)
-    assert game.statuses[-1] == ("no fragment to collect for the open Bio Orders", "info")
+    assert game.statuses[-1][0].startswith("idle, nothing picked")
 
 
 def test_explores_when_there_is_no_exchange():

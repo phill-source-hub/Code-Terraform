@@ -261,14 +261,21 @@ while True:
     journal = get_component(JOURNAL_ID)
     explore = exploring_can_help(self.outpost.biome, cataloged_ids(journal))
     target = pick_target(locations, needed, explore)
+    # Shown on the status line so a wrong pick can be traced to its inputs: the units still
+    # short per fragment, and whether the pick is for an order or an exploration.
+    reason = "short " + str(needed) + ", explore " + str(explore)
     if target is None:
-        set_status("no fragment to collect for the open Bio Orders", "info")
+        set_status("idle, nothing picked (" + reason + ")", "info")
         sleep(PAUSE_SECONDS)
         continue
+    if target.cataloged:
+        reason = "order: " + target.fragment_id + " (" + reason + ")"
+    else:
+        reason = "explore (" + reason + ")"
 
     result = self.collect(target.coords)
     if result.status == "ok":
-        set_status("collected a specimen " + str(target.distance) + " m away", "info")
+        set_status("collected " + reason + ", " + str(target.distance) + " m", "info")
     elif result.status == "busy":
         sleep(RETRY_SECONDS)
     else:
