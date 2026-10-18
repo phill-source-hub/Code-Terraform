@@ -113,6 +113,13 @@ class FakeGame:
         self.warnings.append(sep.join(str(v) for v in values) + end)
 
     def set_status(self, message: str, level: str = "info") -> None:
+        # The game rejects a status that is empty, longer than 240 characters or holds a null
+        # character, and stops the script. Enforce the same rule so tests catch it.
+        if not message or len(message) > 240 or "\x00" in message:
+            raise ValueError(
+                "Status message must contain non-empty text of at most 240 characters, "
+                "without null characters."
+            )
         self.statuses.append((message, level))
 
     def notify(self, text: str, /, level: str = "info", **_: Any) -> None:

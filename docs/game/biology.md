@@ -50,9 +50,14 @@ Source: in-game DOCS manual, build `fe9a45c`. Sections: "Bio Collector", "Bio La
 - Rarity: `common`, `uncommon`, `rare`, `legendary`. Biome: `frozen`, `coastal`, `geothermal`, `volcanic`, `deep`.
 - A Creature's entry appears in `journal.cataloged_creatures(planet_id)` after all five of its fragments are analyzed.
 
-## Our assumptions (UNVERIFIED in game)
+## Our assumptions (check in game)
 
-- `inventory.stacks()` exists on the Inventory component. The manual mentions `stacks()` on Inventory, Storage Bin and Warehouse, but the Inventory method is not shown in the extract.
-- `exchange.active_order()` and `exchange.orders()` can be called from another script. The manual says other scripts can read public state. Confirm in game.
-- Each Lab sample is one per specimen (see above).
-- Reagent ids come from `specimen.recipe` keys. Their ids are not hardcoded.
+- VERIFIED (docs): `inventory.count(item_id)` and `inventory.stacks()` on Inventory (manual 173). The Lab and Exchange scripts call both.
+- VERIFIED (docs): `shop.buy(item_id, quantity)` returns `ActionResult`; `insufficient_credits`, `inventory_full`, `locked`, `not_found` are its refusals (manual 136).
+- VERIFIED (docs): `self.outpost.biome` (manual 253). The collector uses it to pick its own biome's orders.
+- VERIFIED (docs): `try` / `except Exception` at a script boundary is supported (manual 38). The collector uses it to read the Lab chamber.
+- UNVERIFIED: another script can read `get_component("bio_lab_1").specimen`. The manual lists `bio_lab.specimen` as a source of `Specimen` but does not say whether other scripts may read it. The collector falls back to counting its own cargo only if the read fails, which can lead to one specimen too many. Check in game (B-001).
+- UNVERIFIED: whether an extracted specimen is consumed. The Lab discards it after a successful extract (ADR-015), so a restart in that window can extract a second sample. Check in game (B-002).
+- UNVERIFIED: whether `sleep(seconds)` is in simulation seconds (the Clock doc says so) at the scale the scripts use (5 s retry, 60 s pause). Tune in game.
+- Reagent ids come from the recipe keys. The five Lab reagent ids are in manual 242 and are not hardcoded in the scripts.
+- Biome orders with a glow or gene requirement (coastal, geothermal) need the Bio Luminizer or DNA Sequencer, and volcanic or deep orders need the Bio Caster or Conditioner (manual 228). The Exchange passes these orders over; the collector and Lab do not make such samples.

@@ -64,9 +64,9 @@ CI runs `check` on every push and pull request (`.github/workflows/ci.yml`).
 | scanner_1 | Snake-scan all 192 sectors, save map to Data Archive (once researched), repeat hourly; imports `grid` | machine `scanner_1` | L1+L2 pass, L3 pending |
 | harvester_1 | Plan heat-cheapest trips to scanned items, collect and store; imports `grid` | machine `harvester_1` | L1+L2 pass, L3 pending |
 | grid (Library) | Sector names, snake order, heat route search for scanner and harvester | `scripts/libs/grid.py` (game `lib/grid.py`) | Unit tests only; L3 pending |
-| bio_collector_1 | Explore nearest uncataloged fragment, else one the order needs | machine `bio_collector_1` | L1+L2 pass, L3 pending |
-| bio_lab_1 | Analyze specimen, stage reagents from Inventory, extract, ship sample | machine `bio_lab_1` (home base) | L1+L2 pass, L3 pending |
-| bio_exchange_1 | Fill Bio Order from Inventory samples (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
+| bio_collector_1 | Collect fragments that open Bio Orders still need (multi-item, net of stock and in-flight), else explore | machine `bio_collector_1` | L1+L2 pass, L3 pending |
+| bio_lab_1 | Analyze specimen, buy missing reagents from the Shop, stage and load them, extract, ship sample | machine `bio_lab_1` (home base) | L1+L2 pass, L3 pending |
+| bio_exchange_1 | Fill open Bio Orders (several required fragments) from Inventory samples; returns surplus to Inventory (home base) | machine `bio_exchange_1` (home base) | L1+L2 pass, L3 pending |
 | o2gen_1 | Intake CO2/10, dump waste only in 50-60, last resort at 90 | machine `o2gen_1` (Mk I) | L1+L2 pass, L3 pending |
 | pressure_1 / pressure_2 | Sync once per sweep inside the open window | machines `pressure_1`, `pressure_2` (Mk I) | L1+L2 pass, L3 pending |
 | solar_1 / solar_2 (`solar_tracker`) | Tilt = 90 - sun elevation; imports the `solar_tracker` Library | machines `solar_1`, `solar_2` (Solar Generator) | solar_1 L3 pass (S-001); lib import L3 pending |

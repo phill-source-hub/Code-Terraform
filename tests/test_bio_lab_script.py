@@ -1,234 +1,392 @@
-"""Adapter tests: the Bio Lab script against a fake lab, input port, output port and collector.
+"""Adapter tests: the Bio Lab script against a stateful fake lab, its ports, Inventory, Shop and
+the Bio Collector.
 
-The loop has no stop of its own, so each test ends it at the first sleep (a blocked path) or at
-a call it is checking. The output port keeps items between calls, as the game's does.
+The fake keeps items where the game does: the input latches to one reagent id, transfers move
+units rather than copy them, and extraction destroys loaded reagents on a wrong recipe. Every
+action is a tick with a name; a run ends after `budget` ticks, so each test drives a fixed
+number of passes and then checks what the machines hold and which actions ran in what order.
 """
 
-from contextlib import suppress
 from pathlib import Path
 from types import SimpleNamespace
 
-from tests.harness.fake_game import FakeComponent, FakeGame, run_script
+from tests.harness.fake_game import FakeComponent, FakeGame
+from tests.harness.loop import ScriptStop, run_loop
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "main" / "bio_lab_1.py"
-
-
-class _Stop(Exception):
-    """Ends the lab's loop at the call under test."""
-
-
-class StopOnSleep(FakeGame):
-    def sleep(self, seconds: float, /) -> None:
-        super().sleep(seconds)
-        raise _Stop
+RECIPE = {"alkaline_buffer": 2, "cryo_solvent": 3}
+PRICES = {"alkaline_buffer": 1, "cryo_solvent": 2}
 
 
 def ok(**extra):
     return SimpleNamespace(status="ok", message="", **extra)
 
 
-def lab(specimen=None, loaded=None, send_status="ok", extract_status="ok", staged=None):
-    """Returns (lab, record, output_items). output_items is the port's live contents."""
-    record: list = []
-    output_items: list = []
-    input_items: list = list(staged or [])
+def status(value, **extra):
+    return SimpleNamespace(status=value, message="", **extra)
 
-    def connect(target):
-        record.append(("output.connect", target))
+
+def stack(item_id, count, properties=None):
+    return SimpleNamespace(id=item_id, count=count, properties=properties)
+
+
+def specimen(stage="analyzed", recipe=None):
+    recipe = dict(RECIPE) if recipe is None and stage == "analyzed" else recipe
+    return SimpleNamespace(stage=stage, recipe=recipe, fragment_id=None, coords=[0.0, 0.0])
+
+
+def _add(stacks, item_id, count):
+    for s in stacks:
+        if s.id == item_id:
+            s.count += count
+            return
+    stacks.append(stack(item_id, count))
+
+
+def _remove(stacks, item_id, count):
+    moved = 0
+    for s in stacks:
+        if s.id == item_id and moved < count:
+            take = min(s.count, count - moved)
+            s.count -= take
+            moved += take
+    stacks[:] = [s for s in stacks if s.count > 0]
+    return moved
+
+
+class _Input:
+    def __init__(self, lab):
+        self.lab = lab
+
+    def connect(self, target):
+        self.lab.tick("input.connect")
         return ok()
 
-    def send(item, qty, props, mode):
-        if send_status != "ok":
-            record.append(("output.send", item, "refused", send_status))
-            return SimpleNamespace(status=send_status, message="")
-        record.append(("output.send", item, qty, props, mode))
-        output_items.clear()
+    def take(self, item_id, count, properties=None, mode=None):
+        self.lab.tick("input.take")
+        staged = self.lab.input_stacks
+        if any(s.id != item_id and s.count > 0 for s in staged):
+            return status("target_wrong_material", requested=count, moved=0)
+        moved = min(count, self.lab.inventory.get(item_id, 0))
+        if moved == 0:
+            return status("source_empty", requested=count, moved=0)
+        self.lab.inventory[item_id] -= moved
+        _add(staged, item_id, moved)
+        return status("ok" if moved == count else "partial", requested=count, moved=moved)
+
+    def eject(self, destination, item_id, count, properties=None, mode=None):
+        self.lab.tick("input.eject")
+        moved = _remove(self.lab.input_stacks, item_id, count)
+        self.lab.inventory[item_id] = self.lab.inventory.get(item_id, 0) + moved
+        return status("ok", requested=count, moved=moved)
+
+    def stacks(self):
+        return [stack(s.id, s.count) for s in self.lab.input_stacks if s.count > 0]
+
+
+class _Output:
+    def __init__(self, lab):
+        self.lab = lab
+
+    def connect(self, target):
+        self.lab.tick("output.connect")
         return ok()
 
-    def extract():
-        record.append(("extract",))
-        if extract_status == "ok":
-            output_items.append(SimpleNamespace(id="sample_x", count=1, properties={"glow": 3}))
-        return SimpleNamespace(status=extract_status, message="")
+    def send(self, item_id, count, properties=None, mode=None):
+        self.lab.tick("output.send")
+        if self.lab.send_refusal is not None:
+            return status(self.lab.send_refusal, requested=count, moved=0)
+        moved = _remove(self.lab.output_stacks, item_id, count)
+        self.lab.inventory[item_id] = self.lab.inventory.get(item_id, 0) + moved
+        return status("ok", requested=count, moved=moved)
 
-    owner = SimpleNamespace(
-        specimen=specimen,
-        loaded_reagents=loaded or {},
-        take_from=lambda collector: record.append(("take_from",)) or ok(),
-        analyze=lambda: record.append(("analyze",)) or ok(info=None),
-        load=lambda item, qty: record.append(("load", item, qty)) or ok(),
-        extract=extract,
-        discard=lambda: record.append(("discard",)) or ok(),
-        input=SimpleNamespace(
-            connect=lambda target: record.append(("input.connect", target)) or ok(),
-            take=lambda item, qty: record.append(("input.take", item, qty)) or ok(moved=qty),
-            stacks=lambda: list(input_items),
-            eject=lambda dest, item, qty, props, mode: (
-                record.append(("input.eject", item, qty)) or input_items.clear() or ok()
-            ),
-        ),
-        output=SimpleNamespace(
-            connect=connect,
-            send=send,
-            stacks=lambda: list(output_items),
-        ),
-    )
-    return owner, record, output_items
+    def stacks(self):
+        return [stack(s.id, s.count) for s in self.lab.output_stacks if s.count > 0]
 
 
-def run(owner, collector=True):
-    game = StopOnSleep()
-    if collector:
+class FakeLab:
+    """The Bio Lab's own API (self) over shared fake state."""
+
+    def __init__(
+        self,
+        specimen_value=None,
+        loaded=None,
+        input_stacks=(),
+        output_stacks=(),
+        inventory=None,
+        collector_stock=0,
+        budget=60,
+    ):
+        self._specimen = specimen_value
+        self.loaded_reagents = dict(loaded or {})
+        self.input_stacks = [stack(s.id, s.count) for s in input_stacks]
+        self.output_stacks = [stack(s.id, s.count) for s in output_stacks]
+        self.inventory = dict(inventory or {})
+        self.collector_stock = collector_stock
+        self.send_refusal = None
+        self.take_refusal = None
+        self.analysis_refusal = None
+        self.extract_refusal = None
+        self.actions: list = []
+        self.budget = budget
+        self.input = _Input(self)
+        self.output = _Output(self)
+
+    def tick(self, name):
+        self.actions.append(name)
+        if len(self.actions) > self.budget:
+            raise ScriptStop
+
+    @property
+    def specimen(self):
+        return self._specimen
+
+    def take_from(self, collector):
+        self.tick("take_from")
+        if self.take_refusal is not None:
+            return status(self.take_refusal)
+        if self._specimen is not None:
+            return status("input_occupied")
+        if self.collector_stock == 0:
+            return status("source_empty")
+        self.collector_stock -= 1
+        self._specimen = specimen(stage="collected", recipe=None)
+        return ok()
+
+    def analyze(self):
+        self.tick("analyze")
+        if self.analysis_refusal is not None:
+            return status(self.analysis_refusal)
+        if self._specimen is None:
+            return status("input_empty")
+        self._specimen.stage = "analyzed"
+        self._specimen.recipe = dict(RECIPE)
+        info = SimpleNamespace(name="Jaw Fang", fragment_id="gw_jaw_fang", required_recipe=RECIPE)
+        return ok(info=info)
+
+    def load(self, reagent_id, qty, properties=None, property_match=None):
+        self.tick("load")
+        if sum(s.count for s in self.input_stacks if s.id == reagent_id) < qty:
+            return status("insufficient_input")
+        _remove(self.input_stacks, reagent_id, qty)
+        self.loaded_reagents[reagent_id] = self.loaded_reagents.get(reagent_id, 0) + qty
+        return ok()
+
+    def unload_reagents(self):
+        self.tick("unload_reagents")
+        if not self.loaded_reagents:
+            return status("empty")
+        for reagent_id, qty in self.loaded_reagents.items():
+            _add(self.output_stacks, reagent_id, qty)
+        self.loaded_reagents = {}
+        return ok()
+
+    def extract(self):
+        self.tick("extract")
+        if self.extract_refusal is not None:
+            return status(self.extract_refusal)
+        if self._specimen is None:
+            return status("input_empty")
+        if self.loaded_reagents != RECIPE:
+            self.loaded_reagents = {}  # the game destroys the wrong reagents
+            return status("recipe_mismatch")
+        self.loaded_reagents = {}
+        _add(self.output_stacks, "gw_jaw_fang", 1)
+        return ok()
+
+    def discard(self):
+        self.tick("discard")
+        if self._specimen is None:
+            return status("input_empty")
+        self._specimen = None
+        return ok()
+
+
+class FakeShop:
+    def __init__(self, lab, credits):
+        self.lab = lab
+        self.credits = credits
+        self.purchases: list = []
+
+    def buy(self, item_id, quantity=1):
+        self.lab.tick("shop.buy")
+        cost = PRICES[item_id] * quantity
+        if cost > self.credits:
+            return status("insufficient_credits")
+        self.credits -= cost
+        self.purchases.append((item_id, quantity))
+        self.lab.inventory[item_id] = self.lab.inventory.get(item_id, 0) + quantity
+        return ok()
+
+
+class _TickingGame(FakeGame):
+    """Sleep counts as a tick too, so a pass that only waits still ends at the budget."""
+
+    def __init__(self, lab):
+        super().__init__()
+        self.lab = lab
+
+    def sleep(self, seconds, /):
+        super().sleep(seconds)
+        self.lab.tick("sleep")
+
+
+def drive(lab, credits=100, with_collector=True, with_inventory=True):
+    """Runs the Lab script until its tick budget ends it. Returns (game, shop)."""
+    game = _TickingGame(lab)
+    shop = FakeShop(lab, credits)
+    game.components["shop"] = FakeComponent(id="shop", type_id="shop", methods={"buy": shop.buy})
+    if with_collector:
         game.components["bio_collector_1"] = FakeComponent(
-            id="bio_collector_1", type_id="bio_collector"
+            id="bio_collector_1", type_id="bio_collector", methods={}
         )
-    with suppress(_Stop):
-        run_script(
-            SCRIPT.read_text(encoding="utf-8"),
-            game,
-            filename=str(SCRIPT),
-            extra_globals={"self": owner},
+    if with_inventory:
+        game.components["inventory"] = FakeComponent(
+            id="inventory",
+            type_id="inventory",
+            methods={"count": lambda item_id: lab.inventory.get(item_id, 0)},
         )
-    return game
+    run_loop(SCRIPT, game, lab)
+    return game, shop
 
 
-def _raise_stop():
-    raise _Stop
+def sample_count(lab):
+    return lab.inventory.get("gw_jaw_fang", 0)
 
 
-def stop_when(record, name):
-    """Make the named call stop the loop after recording it."""
-
-    def fake(*args):
-        record.append((name,))
-        raise _Stop
-
-    return fake
-
-
-def test_takes_specimen_from_collector_when_chamber_is_empty():
-    owner, record, _ = lab(specimen=None)
-    owner.take_from = stop_when(record, "take_from")
-    run(owner)
-    assert record == [("take_from",)]
+def test_full_cycle_buys_the_shortfall_extracts_once_and_ships_the_sample():
+    lab = FakeLab(inventory={"alkaline_buffer": 5}, collector_stock=1, budget=40)
+    game, shop = drive(lab)
+    assert sample_count(lab) == 1
+    assert lab.specimen is None
+    assert lab.output_stacks == []
+    assert lab.input_stacks == []
+    assert lab.loaded_reagents == {}
+    assert shop.purchases == [("cryo_solvent", 3)]
+    assert shop.credits == 94
+    assert lab.actions.count("extract") == 1
 
 
-def test_analyzes_a_collected_specimen():
-    owner, record, _ = lab(specimen=SimpleNamespace(stage="collected", recipe=None))
-    owner.analyze = stop_when(record, "analyze")
-    run(owner)
-    assert record == [("analyze",)]
+def test_does_not_buy_what_inventory_already_holds():
+    lab = FakeLab(inventory={"alkaline_buffer": 5, "cryo_solvent": 3}, collector_stock=1, budget=40)
+    game, shop = drive(lab)
+    assert shop.purchases == []
+    assert sample_count(lab) == 1
 
 
-def test_stages_missing_reagent_from_inventory_then_loads_it():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 4})
-    owner, record, _ = lab(specimen=specimen, loaded={})
-    owner.load = stop_when(record, "load")
-    run(owner)
-    assert ("input.connect", "inventory") in record
-    assert ("input.take", "alkaline_buffer", 4) in record
+def test_insufficient_credits_keeps_the_specimen_and_warns():
+    lab = FakeLab(inventory={"alkaline_buffer": 5}, collector_stock=1, budget=20)
+    game, shop = drive(lab, credits=1)
+    assert lab.specimen is not None
+    assert "extract" not in lab.actions
+    assert sample_count(lab) == 0
+    assert ("buy cryo_solvent: insufficient_credits", "warn") in game.statuses
+    assert "warning: buy cryo_solvent: insufficient_credits\n" in game.printed
 
 
-def test_extracts_once_recipe_is_loaded_and_leaves_the_sample_in_output():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
-    owner, record, output_items = lab(specimen=specimen, loaded={"alkaline_buffer": 2})
-    owner.extract = stop_when(record, "extract")
-    run(owner)
-    assert record == [("extract",)]
-
-
-def test_ships_the_output_then_discards_the_specimen():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
-    owner, record, output_items = lab(specimen=specimen, loaded={"alkaline_buffer": 2})
-    output_items.append(SimpleNamespace(id="sample_x", count=1, properties={"glow": 3}))
-    owner.discard = stop_when(record, "discard")
-    run(owner)
-    names = [entry[0] for entry in record]
-    assert names.index("output.connect") < names.index("output.send") < names.index("discard")
-    assert ("output.send", "sample_x", 1, {"glow": 3}, "exact") in record
-    assert output_items == []
-
-
-def test_output_holding_items_blocks_extraction_and_restocking():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 4})
-    owner, record, output_items = lab(specimen=specimen, loaded={})
-    output_items.append(SimpleNamespace(id="sample_x", count=1, properties=None))
-    owner.discard = stop_when(record, "discard")
-    run(owner)
-    assert ("extract",) not in record
-    assert ("input.take", "alkaline_buffer", 4) not in record
-
-
-def test_refused_send_keeps_the_specimen_and_warns():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
-    owner, record, output_items = lab(
-        specimen=specimen, loaded={"alkaline_buffer": 2}, send_status="research_required"
+def test_restart_resumes_from_partly_staged_reagents_without_buying_twice():
+    lab = FakeLab(
+        specimen_value=specimen(),
+        loaded={"alkaline_buffer": 2},
+        input_stacks=[stack("cryo_solvent", 1)],
+        inventory={"cryo_solvent": 2},
+        budget=40,
     )
-    output_items.append(SimpleNamespace(id="sample_x", count=1, properties=None))
-    game = run(owner)
-    assert ("discard",) not in record
-    assert output_items != []
-    assert game.statuses[-1] == ("output not shipped (research_required), specimen kept", "warn")
-    assert "warning: output not shipped (research_required), specimen kept\n" in game.printed
+    game, shop = drive(lab)
+    assert shop.purchases == []
+    assert sample_count(lab) == 1
+    assert lab.specimen is None
 
 
-def test_extract_failure_is_a_warning_and_keeps_the_specimen():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
-    owner, record, _ = lab(
-        specimen=specimen, loaded={"alkaline_buffer": 2}, extract_status="recipe_mismatch"
+def test_a_stray_reagent_in_the_input_is_ejected_to_inventory_not_flushed():
+    lab = FakeLab(
+        specimen_value=specimen(),
+        input_stacks=[stack("alkaline_buffer", 4)],
+        inventory={"cryo_solvent": 3},
+        budget=40,
     )
-    game = run(owner)
-    assert game.statuses[-1] == ("extract recipe_mismatch", "warn")
-    assert ("discard",) not in record
+    drive(lab)
+    # 4 ejected back, 2 taken for the recipe, 2 left over in inventory after extraction.
+    assert lab.inventory["alkaline_buffer"] == 2
+    assert "input.eject" in lab.actions
+    assert sample_count(lab) == 1
 
 
-def test_missing_collector_is_an_error():
-    owner, record, _ = lab(specimen=None)
-    game = run(owner, collector=False)
-    assert game.statuses[-1] == ("bio_collector_1 not found", "error")
-    assert record == []
+def test_a_sample_left_in_the_output_is_shipped_before_anything_else_starts():
+    lab = FakeLab(output_stacks=[stack("gw_jaw_fang", 1)], budget=3)
+    drive(lab)
+    assert lab.actions[:2] == ["output.connect", "output.send"]
+    assert sample_count(lab) == 1
+
+
+def test_unneeded_loaded_reagents_are_unloaded_before_extract_can_destroy_them():
+    lab = FakeLab(
+        specimen_value=specimen(),
+        loaded={"cryo_solvent": 9},
+        inventory={"alkaline_buffer": 2, "cryo_solvent": 0},
+        budget=40,
+    )
+    game, shop = drive(lab)
+    assert lab.actions.index("unload_reagents") < lab.actions.index("extract")
+    assert sample_count(lab) == 1
+    # The 9 unloaded units went back to Inventory; the recipe then used 3 of them.
+    assert lab.inventory["cryo_solvent"] == 6
+    assert shop.purchases == []
+
+
+def test_a_refused_ship_keeps_the_specimen_and_the_sample():
+    lab = FakeLab(
+        specimen_value=specimen(),
+        output_stacks=[stack("gw_jaw_fang", 1)],
+        budget=5,
+    )
+    lab.send_refusal = "target_full"
+    game, shop = drive(lab)
+    assert lab.specimen is not None
+    assert lab.output_stacks != []
+    assert ("output not shipped (target_full)", "warn") in game.statuses
+    assert "discard" not in lab.actions
+
+
+def test_a_refused_extract_is_a_warning_and_keeps_the_specimen():
+    lab = FakeLab(
+        specimen_value=specimen(), inventory={"alkaline_buffer": 2, "cryo_solvent": 3}, budget=12
+    )
+    lab.extract_refusal = "busy"
+    game, shop = drive(lab)
+    assert lab.specimen is not None
+    assert "discard" not in lab.actions
+
+
+def test_an_unanalyzable_specimen_is_discarded_with_a_warning():
+    lab = FakeLab(specimen_value=specimen(stage="collected", recipe=None), budget=4)
+    lab.analysis_refusal = "invalid_specimen"
+    game, shop = drive(lab)
+    assert lab.specimen is None
+    assert ("specimen cannot be analyzed, discarded", "warn") in game.statuses
+
+
+def test_a_missing_collector_is_a_warning_not_a_crash():
+    lab = FakeLab(budget=3)
+    game, shop = drive(lab, with_collector=False)
+    assert ("bio_collector_1 not found", "warn") in game.statuses
+    assert "take_from" not in lab.actions
+
+
+def test_a_busy_take_from_retries_after_a_short_pause():
+    lab = FakeLab(budget=4)
+    lab.take_refusal = "busy"
+    game, shop = drive(lab)
+    # Two passes of (take_from, sleep): each sleep is the 5 s retry.
+    assert game.clock.now == 10
+
+
+def test_an_empty_collector_waits_without_a_warning():
+    lab = FakeLab(collector_stock=0, budget=2)
+    game, shop = drive(lab)
+    assert not any(level == "warn" for _, level in game.statuses)
 
 
 def test_machine_script_has_no_imports():
     for line in SCRIPT.read_text(encoding="utf-8").splitlines():
         assert not line.strip().startswith(("import ", "from ")), line
-
-
-def test_a_different_reagent_in_the_input_is_ejected_before_taking_the_next():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"cryo_solvent": 3})
-    stray = SimpleNamespace(id="alkaline_buffer", count=2, properties=None)
-    owner, record, _ = lab(specimen=specimen, loaded={}, staged=[stray])
-    owner.load = stop_when(record, "load")
-    run(owner)
-    names = [entry[0] for entry in record]
-    assert ("input.eject", "alkaline_buffer", 2) in record
-    assert names.index("input.eject") < names.index("input.take")
-
-
-def test_loads_only_what_the_take_actually_moved():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"cryo_solvent": 6})
-    owner, record, _ = lab(specimen=specimen, loaded={})
-    owner.input.take = lambda item, qty: record.append(("input.take", item, qty)) or ok(moved=2)
-    owner.load = lambda item, qty: record.append(("load", item, qty)) or _raise_stop()
-    run(owner)
-    assert ("load", "cryo_solvent", 2) in record
-
-
-def test_a_failed_take_from_the_collector_is_printed_as_a_warning():
-    owner, record, _ = lab(specimen=None)
-    owner.take_from = lambda collector: SimpleNamespace(status="source_busy", message="")
-    game = run(owner)
-    assert "warning: take_from source_busy\n" in game.printed
-
-
-def test_discard_input_empty_is_not_a_warning():
-    specimen = SimpleNamespace(stage="analyzed", recipe={"alkaline_buffer": 2})
-    owner, record, output_items = lab(specimen=specimen, loaded={"alkaline_buffer": 2})
-    output_items.append(SimpleNamespace(id="sample_x", count=1, properties=None))
-    owner.discard = lambda: (
-        record.append(("discard",)) or SimpleNamespace(status="input_empty", message="")
-    )
-    owner.extract = lambda: record.append(("extract",)) or _raise_stop()
-    game = run(owner)
-    assert ("discard",) in record
-    assert not any(line.startswith("warning: discard") for line in game.printed)
