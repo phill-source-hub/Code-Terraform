@@ -86,7 +86,7 @@ def test_widgets_draw_and_every_check_passes_on_a_working_fake():
     assert _console(game, "text") == "probe text: PASS round trip ok\n"
     assert _console(game, "switch") == "probe switch: PASS round trip ok\n"
     assert _console(game, "mouse") == "probe mouse: PASS x=10 y=20\n"
-    assert _console(game, "bus") == "probe bus: PASS sizes 200, 2000, 20000 intact\n"
+    assert _console(game, "bus") == "probe bus: PASS sizes 200, 2000, 9000 intact\n"
 
 
 def test_persist_row_turns_pass_on_the_second_tick():

@@ -8,6 +8,7 @@ Assumptions: argument shapes follow the game stub (`__builtins__.pyi`, VERIFIED 
     call disagree: fix the call.
 Run 1 (2026-10-18, panel_1.py): widgets FAILed on key order (key goes first); bus FAILed because
     the packet is a CommsMessage, so the check compares .value, not str(packet).
+Run 2: stopped with OverflowError at the 20000 payload (string limit 10,000). Sizes cut to 9000.
 Checks run once, on the first pass, and their results are kept in module state and drawn each tick:
     widgets  each named widget and primitive is drawn without error
     persist  module state survives between ticks (row turns PASS on the second tick)
@@ -15,7 +16,7 @@ Checks run once, on the first pass, and their results are kept in module state a
     switch   set_switch / get_switch round trip
     mouse    mouse() returns a value
     click    clicks() reports a click on empty card space (WAIT until you click)
-    bus      comms send / receive at payload sizes 200, 2000 and 20000 characters
+    bus      comms send / receive at payload sizes 200, 2000 and 9000 characters
 Console: one line per check, "probe <name>: PASS|FAIL|SKIP|WAIT <detail>", printed when it is set.
 Safety: no machine is commanded. The bus check sends only to ctrl.probe.echo and drains that channel
     at the end, bounded by DRAIN_LIMIT.
@@ -25,7 +26,9 @@ API facts relied on (all UNVERIFIED until the in-game log passes): panel.clear, 
     with send, receive; print. Log results in docs/in-game-test-log.md (row PX-001).
 """
 
-PAYLOAD_SIZES = (200, 2000, 20000)
+# 9000 stays under the game's default string limit of 10,000 (Settings > Game > Advanced
+# Scripting). Run 2 hit that limit at 20000, so the probe does not go higher by default.
+PAYLOAD_SIZES = (200, 2000, 9000)
 CHANNEL = "ctrl.probe.echo"
 # A probe loop still needs a bound, same rule as every loop in this repo.
 DRAIN_LIMIT = 50
